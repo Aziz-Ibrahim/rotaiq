@@ -1,3 +1,136 @@
-from django.shortcuts import render
+from rest_framework import viewsets, mixins, status
+from rest_framework.response import Response
+from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
 
-# Create your views here.
+from .models import Shift, Branch
+from .serializers import BranchSerializer, ShiftSerializer
+
+
+class BranchViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    A viewset for viewing branches.
+
+    This viewset provides read-only operations on the Branch model, such as
+    listing all branches or retrieving a single branch's details.
+    """
+    queryset = Branch.objects.all()
+    serializer_class = BranchSerializer
+    permission_classes = [IsAuthenticated]
+
+
+class ShiftViewSet(viewsets.ModelViewSet):
+    """
+    A viewset for managing shifts.
+
+    This viewset provides CRUD (Create, Read, Update, Delete) operations for
+    shifts. It includes custom actions for employees to claim shifts and
+    for managers to approve them.
+    """
+    queryset = Shift.objects.all()
+    serializer_class = ShiftSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        """
+        Filters the queryset based on the user's role.
+
+        Employees can only see 'open' shifts.
+        Managers can see all shifts.
+
+        Returns:
+            QuerySet: The filtered queryset of Shift objects.
+        """
+        if self.request.user.role == 'employee':
+            return self.queryset.filter(status='open')
+
+        return self.queryset
+
+    def perform_create(self, serializer):
+        """
+        Creates a new shift instance.
+
+        This method ensures that only a manager can post a new shift. The
+        `posted_by` field is automatically set to the current user.
+
+        Args:
+            serializer (Serializer): The serializer instance for the new shift.
+        """
+        if self.request.user.role == 'manager':
+            serializer.save(posted_by=self.request.user, status='open')
+        else:
+            return Response(
+                {"detail": "You don't have permission to perform this action."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+    @action(detail=True, methods=['post'])
+    def claim(self, request, pk=None):
+        """
+        Allows an employee to claim an open shift.
+
+        This action is only available to employees and updates the shift's
+        status to 'claimed'.
+
+        Args:
+            request (Request): The request object.
+            pk (int): The primary key of the shift to be claimed.
+
+        Returns:
+            Response:
+            A response containing the updated shift data or an error message.
+        """
+        shift = self.get_object()
+        user = request.user
+
+        # Condition to check if an employee can claim the shift
+        is_employee_and_shift_is_open = (
+            user.role == 'employee' and shift.status == 'open'
+        )
+
+        if is_employee_and_shift_is_open:
+            shift.claimed_by = user
+            shift.status = 'claimed'
+            shift.save()
+            return Response(self.get_serializer(shift).data)
+
+        return Response(
+            {"detail": "Unable to claim this shift."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    @action(detail=True, methods=['post'])
+    def approve(self, request, pk=None):
+        """
+        Allows a manager to approve a claimed shift.
+
+        This action is only available to the manager who originally posted
+        the shift and only if the shift's status is 'claimed'.
+
+        Args:
+            request (Request): The request object.
+            pk (int): The primary key of the shift to be approved.
+
+        Returns:
+            Response:
+            A response containing the updated shift data or an error message.
+        """
+        shift = self.get_object()
+        user = request.user
+
+        # Condition to check if a manager can approve the shift
+        can_manager_approve_shift = (
+            user.role == 'manager' and
+            shift.status == 'claimed' and
+            shift.posted_by == user
+        )
+
+        if can_manager_approve_shift:
+            shift.status = 'approved'
+            shift.save()
+            return Response(self.get_serializer(shift).data)
+
+        return Response(
+            {"detail": "Unable to approve this shift."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
