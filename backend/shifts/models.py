@@ -1,3 +1,4 @@
+import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 
@@ -50,6 +51,28 @@ class User(AbstractUser):
         blank=True,
         related_name='employees'
     )
+
+
+class Invitation(models.Model):
+    """
+    Represents an invitation to register for a new user.
+
+    Each invitation contains a unique token and is linked to the email and
+    branch of the invited person.
+    """
+    token = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    email = models.EmailField(unique=True)
+    branch = models.ForeignKey(Branch, on_delete=models.CASCADE)
+    role = models.CharField(
+        max_length=20,
+        choices=User.ROLE_CHOICES,
+        default='employee'
+    )
+    is_used = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Invitation for {self.email} ({self.role})"
 
 
 class Shift(models.Model):
@@ -107,5 +130,4 @@ class Shift(models.Model):
         """
         Returns a human-readable string for the shift instance.
         """
-        return f"{self.role} shift at {self.branch.name} on "
-        f"{self.start_time.date()}"
+        return f"{self.role} shift at {self.branch.name} on {self.start_time.date()}"

@@ -1,10 +1,22 @@
-from rest_framework import viewsets, mixins, status
+from rest_framework import viewsets, mixins, status, generics
 from rest_framework.response import Response
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 
 from .models import Shift, Branch, User
 from .serializers import BranchSerializer, ShiftSerializer, UserSerializer
+from .user_serializers import UserRegistrationSerializer
+
+
+class UserRegistrationView(generics.CreateAPIView):
+    """
+    Handles new user registration.
+    
+    This view is publicly accessible and allows new users to create an account.
+    It uses the UserRegistrationSerializer to validate and save user data.
+    """
+    serializer_class = UserRegistrationSerializer
+    permission_classes = [AllowAny]
 
 
 class UserViewSet(viewsets.ReadOnlyModelViewSet):
