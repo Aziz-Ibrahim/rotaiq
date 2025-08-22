@@ -10,8 +10,10 @@ from shifts import views
 
 
 router = DefaultRouter()
+router.register(r'users', views.UserViewSet)
 router.register(r'shifts', views.ShiftViewSet)
 router.register(r'branches', views.BranchViewSet)
+router.register(r'invitations', views.InvitationViewSet)
 
 urlpatterns = [
     path('admin/', admin.site.urls),

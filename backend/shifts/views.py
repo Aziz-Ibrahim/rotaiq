@@ -3,8 +3,13 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated, AllowAny
 
-from .models import Shift, Branch, User
-from .serializers import BranchSerializer, ShiftSerializer, UserSerializer
+from .models import Shift, Branch, User, Invitation
+from .serializers import (
+    BranchSerializer,
+    ShiftSerializer,
+    UserSerializer,
+    InvitationSerializer
+)
 from .user_serializers import UserRegistrationSerializer
 
 
@@ -40,6 +45,44 @@ class BranchViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Branch.objects.all()
     serializer_class = BranchSerializer
     permission_classes = [IsAuthenticated]
+
+
+class InvitationViewSet(
+    mixins.CreateModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.ListModelMixin,
+    viewsets.GenericViewSet
+):
+    """
+    A viewset for managing invitations.
+
+    Managers can create and list invitations for their branch.
+    """
+    queryset = Invitation.objects.all()
+    serializer_class = InvitationSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        """
+        Filters invitations to only show those belonging to the user's branch.
+        """
+        if self.request.user.role == 'manager':
+            return self.queryset.filter(branch=self.request.user.branch)
+        return self.queryset.none()  # Employees cannot see invitations
+
+    def perform_create(self, serializer):
+        """
+        Creates a new invitation linked to the manager's branch.
+        """
+        if self.request.user.role == 'manager':
+            # Managers can only create invitations for their own branch
+            branch = self.request.user.branch
+            serializer.save(branch=branch)
+        else:
+            return Response(
+                {"detail": "You don't have permission to perform this action."},
+                status=status.HTTP_403_FORBIDDEN
+            )
 
 
 class ShiftViewSet(viewsets.ModelViewSet):

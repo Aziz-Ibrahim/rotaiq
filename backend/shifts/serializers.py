@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import User, Branch, Shift
+from .models import User, Branch, Shift, Invitation
 
 
 class BranchSerializer(serializers.ModelSerializer):
@@ -38,6 +38,18 @@ class UserSerializer(serializers.ModelSerializer):
         """
         model = User
         fields = ['id', 'email', 'first_name', 'last_name', 'role', 'branch']
+
+
+class InvitationSerializer(serializers.ModelSerializer):
+    """
+    Serializes invitation data for creating a new invitation.
+
+    This serializer is used by managers to send invitations to new employees.
+    """
+    class Meta:
+        model = Invitation
+        fields = ['email', 'branch', 'role']
+        read_only_fields = ['token', 'is_used', 'created_at']
 
 
 class ShiftSerializer(serializers.ModelSerializer):

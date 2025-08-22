@@ -18,6 +18,9 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     invitation_token = serializers.UUIDField(write_only=True)
     
     class Meta:
+        """
+        Meta options for UserRegistrationSerializer
+        """
         model = User
         fields = [
             'invitation_token', 'email', 'password', 'password2',
