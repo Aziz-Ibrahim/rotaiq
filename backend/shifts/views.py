@@ -3,8 +3,19 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 
-from .models import Shift, Branch
-from .serializers import BranchSerializer, ShiftSerializer
+from .models import Shift, Branch, User
+from .serializers import BranchSerializer, ShiftSerializer, UserSerializer
+
+
+class UserViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    A viewset for viewing user profiles.
+
+    Provides read-only access to user data.
+    """
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = [IsAuthenticated]
 
 
 class BranchViewSet(viewsets.ReadOnlyModelViewSet):
@@ -83,7 +94,6 @@ class ShiftViewSet(viewsets.ModelViewSet):
         shift = self.get_object()
         user = request.user
 
-        # Condition to check if an employee can claim the shift
         is_employee_and_shift_is_open = (
             user.role == 'employee' and shift.status == 'open'
         )
@@ -118,7 +128,6 @@ class ShiftViewSet(viewsets.ModelViewSet):
         shift = self.get_object()
         user = request.user
 
-        # Condition to check if a manager can approve the shift
         can_manager_approve_shift = (
             user.role == 'manager' and
             shift.status == 'claimed' and

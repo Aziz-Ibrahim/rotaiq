@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 
     # Third Party Apps
+    'rest_framework_simplejwt.token_blacklist',
     'rest_framework',
 
     # Custom Apps
@@ -51,10 +52,21 @@ AUTH_USER_MODEL = 'shifts.User'
 # REST Framework settings
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework.authentication.TokenAuthentication',  # For securing the API
-        'rest_framework.authentication.SessionAuthentication',  # For the browsable API
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
 }
+
+# Simple JWT settings for token lifespan
+from datetime import timedelta
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'UPDATE_LAST_LOGIN': False,
+}
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
