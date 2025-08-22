@@ -42,7 +42,7 @@ INSTALLED_APPS = [
     'rest_framework',
 
     # Custom Apps
-    'shifts',
+    'shifts.apps.ShiftsConfig',
 ]
 
 # Custom user model
