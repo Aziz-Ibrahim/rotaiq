@@ -6,28 +6,44 @@ const Register = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [invitationToken, setInvitationToken] = useState('');
+  const [email, setEmail] = useState(''); // State to hold the email
   const [password, setPassword] = useState('');
   const [password2, setPassword2] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Read the token from the URL on component load
     const token = searchParams.get('token');
-    if (token) {
-      setInvitationToken(token);
-    } else {
-      // If no token is found, redirect to an error page or the login page
+    if (!token) {
       navigate('/login');
+      return;
     }
+
+    setInvitationToken(token);
+    // Fetch invitation details using the token
+    const fetchInvitationDetails = async () => {
+      try {
+        const response = await apiClient.get(`invitations/details/?token=${token}`);
+        const { email } = response.data;
+        setEmail(email);
+      } catch (err) {
+        console.error('Invalid or used token:', err.response);
+        setError('Invalid or expired invitation link.');
+        // Redirect after 3s to prevent user from being stuck on an error page
+        setTimeout(() => navigate('/login'), 3000); 
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchInvitationDetails();
   }, [searchParams, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
-
-    // Basic form validation
     if (password !== password2) {
       setError("Passwords don't match.");
       return;
@@ -47,20 +63,33 @@ const Register = () => {
       navigate('/login');
     } catch (err) {
       console.error('Registration failed:', err.response.data);
-      setError(err.response.data.detail || 'Registration failed.');
+      // Display the most relevant error message from the backend
+      setError(err.response.data.detail || JSON.stringify(err.response.data));
     }
   };
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  // Display error message and prevent form submission if an error exists
+  if (error) {
+    return <p style={{ color: 'red' }}>{error}</p>;
+  }
 
   return (
     <div>
       <h2>Register with Invitation</h2>
-      {error && <p style={{ color: 'red' }}>{error}</p>}
       <form onSubmit={handleSubmit}>
-        <input
-          type="hidden"
-          value={invitationToken}
-          readOnly
-        />
+        <div>
+          <label>Email Address:</label>
+          <input
+            type="email"
+            value={email}
+            readOnly // Make the field read-only
+            style={{ backgroundColor: '#f0f0f0' }}
+          />
+        </div>
         <div>
           <label>First Name:</label>
           <input
