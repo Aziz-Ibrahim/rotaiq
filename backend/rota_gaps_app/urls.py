@@ -24,6 +24,13 @@ urlpatterns = [
         name='register'
     ),
 
+    path(
+        'api/register/manager/',
+        views.ManagerRegistrationView.as_view(),
+        name='register_manager'
+    ),
+
+
     path('api/', include(router.urls)),
 
     path(

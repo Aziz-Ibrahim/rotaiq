@@ -1,7 +1,7 @@
 from rest_framework import viewsets, mixins, status, generics
 from rest_framework.response import Response
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
 
 from .models import Shift, Branch, User, Invitation
 from .serializers import (
@@ -11,6 +11,7 @@ from .serializers import (
     InvitationSerializer
 )
 from .user_serializers import UserRegistrationSerializer
+from .manager_serializers import ManagerRegistrationSerializer
 
 
 class UserRegistrationView(generics.CreateAPIView):
@@ -22,6 +23,17 @@ class UserRegistrationView(generics.CreateAPIView):
     """
     serializer_class = UserRegistrationSerializer
     permission_classes = [AllowAny]
+
+
+class ManagerRegistrationView(generics.CreateAPIView):
+    """
+    Handles new manager registration.
+
+    This view is for creating a new manager account. It is strictly limited
+    to administrators.
+    """
+    serializer_class = ManagerRegistrationSerializer
+    permission_classes = [IsAdminUser]
 
 
 class UserViewSet(viewsets.ReadOnlyModelViewSet):
