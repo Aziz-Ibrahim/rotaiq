@@ -225,3 +225,51 @@ class ShiftViewSet(viewsets.ModelViewSet):
             {"detail": "Unable to approve this shift."},
             status=status.HTTP_400_BAD_REQUEST
         )
+
+    @action(detail=True, methods=['post'])
+    def decline(self, request, pk=None):
+        """
+        Allows a manager to decline a claimed shift.
+
+        This action is only available to the manager who originally posted
+        the shift and only if the shift's status is 'claimed'.
+        """
+        shift = self.get_object()
+        user = request.user
+
+        can_manager_decline_shift = (
+            user.role == 'manager' and
+            shift.status == 'claimed' and
+            shift.posted_by == user
+        )
+
+        if can_manager_decline_shift:
+            shift.status = 'open' # Changes the status back to 'open'
+            shift.claimed_by = None # Removes the employee's claim
+            shift.save()
+            return Response(self.get_serializer(shift).data)
+
+        return Response(
+            {"detail": "Unable to decline this shift."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    @action(detail=False, methods=['get'])
+    def my_approved_shifts(self, request):
+        """
+        Lists shifts that have been claimed and approved by the current
+        employee.
+        """
+        user = request.user
+        if user.role != 'employee':
+            return Response(
+                {"detail": "This endpoint is for employees only."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        approved_shifts = Shift.objects.filter(
+            claimed_by=user, 
+            status='approved'
+        )
+        serializer = self.get_serializer(approved_shifts, many=True)
+        return Response(serializer.data)
