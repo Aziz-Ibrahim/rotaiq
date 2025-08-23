@@ -2,16 +2,15 @@ from rest_framework import viewsets, mixins, status, generics
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
+from rest_framework.exceptions import PermissionDenied
+from django.shortcuts import get_object_or_404
 
 from .models import Shift, Branch, User, Invitation
 from .serializers import (
-    BranchSerializer,
-    ShiftSerializer,
-    UserSerializer,
-    InvitationSerializer
+    BranchSerializer, ShiftSerializer, UserSerializer,
+    InvitationSerializer, UserRegistrationSerializer,
+    ManagerRegistrationSerializer
 )
-from .user_serializers import UserRegistrationSerializer
-from .manager_serializers import ManagerRegistrationSerializer
 
 
 class UserRegistrationView(generics.CreateAPIView):
@@ -74,6 +73,22 @@ class InvitationViewSet(
     serializer_class = InvitationSerializer
     permission_classes = [IsAuthenticated]
 
+    @action(detail=False, methods=['get'], permission_classes=[AllowAny])
+    def details(self, request):
+        """
+        Retrieves invitation details by token for public access.
+        """
+        token = request.query_params.get('token')
+        if not token:
+            return Response(
+                {"detail": "Token is required."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        invitation = get_object_or_404(Invitation, token=token, is_used=False)
+        serializer = self.get_serializer(invitation)
+        return Response(serializer.data)
+
     def get_queryset(self):
         """
         Filters invitations to only show those belonging to the user's branch.
@@ -91,9 +106,9 @@ class InvitationViewSet(
             branch = self.request.user.branch
             serializer.save(branch=branch)
         else:
-            return Response(
-                {"detail": "You don't have permission to perform this action."},
-                status=status.HTTP_403_FORBIDDEN
+            # Raise a PermissionDenied exception instead of a Response
+            raise PermissionDenied(
+                "You do not have permission to perform this action."
             )
 
 

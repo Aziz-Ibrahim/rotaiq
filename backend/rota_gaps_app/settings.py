@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 
     # Third Party Apps
+    'corsheaders',
     'rest_framework_simplejwt.token_blacklist',
     'rest_framework',
 
@@ -48,6 +49,9 @@ INSTALLED_APPS = [
 
 # Custom user model
 AUTH_USER_MODEL = 'shifts.User'
+ACCOUNT_AUTHENTICATION_METHOD = 'email'
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_USERNAME_REQUIRED = False
 
 # REST Framework settings
 REST_FRAMEWORK = {
@@ -65,10 +69,14 @@ SIMPLE_JWT = {
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
     'UPDATE_LAST_LOGIN': False,
+    'USER_ID_FIELD': 'email',
+    'USERNAME_FIELD': 'email',
+    'TOKEN_OBTAIN_SERIALIZER': 'shifts.serializers.MyTokenObtainPairSerializer',
 }
 
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -79,6 +87,11 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'rota_gaps_app.urls'
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
 
 TEMPLATES = [
     {
@@ -125,6 +138,10 @@ AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
+]
+
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
 ]
 
 

@@ -7,6 +7,11 @@ from rest_framework_simplejwt.views import (
 )
 
 from shifts import views
+from shifts.serializers import MyTokenObtainPairSerializer
+
+
+class MyTokenObtainPairView(TokenObtainPairView):
+    serializer_class = MyTokenObtainPairSerializer
 
 
 router = DefaultRouter()
@@ -14,6 +19,7 @@ router.register(r'users', views.UserViewSet)
 router.register(r'shifts', views.ShiftViewSet)
 router.register(r'branches', views.BranchViewSet)
 router.register(r'invitations', views.InvitationViewSet)
+
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -30,12 +36,11 @@ urlpatterns = [
         name='register_manager'
     ),
 
-
     path('api/', include(router.urls)),
 
     path(
         'api/token/',
-        TokenObtainPairView.as_view(),
+        MyTokenObtainPairView.as_view(),
         name='token_obtain_pair'
     ),
 
@@ -44,5 +49,4 @@ urlpatterns = [
         TokenRefreshView.as_view(),
         name='token_refresh'
     ),
-
 ]

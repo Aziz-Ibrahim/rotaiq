@@ -23,9 +23,10 @@ class ShiftAdmin(admin.ModelAdmin):
 @admin.register(Invitation)
 class InvitationAdmin(admin.ModelAdmin):
     """Admin configuration for the Invitation model."""
-    list_display = ('email', 'branch', 'is_used', 'created_at')
+    list_display = ('email', 'branch', 'is_used', 'created_at', 'token')
     list_filter = ('is_used', 'branch')
     search_fields = ('email',)
+    readonly_fields = ['token']
 
 
 @admin.register(User)
