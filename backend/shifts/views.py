@@ -32,18 +32,25 @@ class ManagerRegistrationView(generics.CreateAPIView):
     to administrators.
     """
     serializer_class = ManagerRegistrationSerializer
-    permission_classes = [IsAdminUser]
+    permission_classes = [AllowAny]
 
 
 class UserViewSet(viewsets.ReadOnlyModelViewSet):
     """
     A viewset for viewing user profiles.
-
-    Provides read-only access to user data.
     """
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [IsAuthenticated]
+
+    @action(detail=False, methods=['get'])
+    def me(self, request):
+        """
+        Returns the details of the currently logged-in user.
+        """
+        user = request.user
+        serializer = self.get_serializer(user)
+        return Response(serializer.data)
 
 
 class BranchViewSet(viewsets.ReadOnlyModelViewSet):

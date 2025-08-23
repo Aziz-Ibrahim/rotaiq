@@ -4,7 +4,6 @@ from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from .models import Branch, User, Shift, Invitation
 
 
-# Register custom models here.
 @admin.register(Branch)
 class BranchAdmin(admin.ModelAdmin):
     """Admin configuration for the Branch model."""
@@ -39,6 +38,31 @@ class UserAdmin(BaseUserAdmin):
     search_fields = ('email', 'first_name', 'last_name')
     ordering = ('email',)
 
-    fieldsets = BaseUserAdmin.fieldsets + (
-        ('Custom Fields', {'fields': ('role', 'branch')}),
+    # These fieldsets are for editing an existing user
+    fieldsets = (
+        (None, {'fields': ('email', 'password')}),
+        (
+            'Personal info',
+            {'fields': ('first_name','last_name', 'role', 'branch')}
+        ),
+        (
+            'Permissions',
+            {'fields': (
+                'is_active',
+                'is_staff',
+                'is_superuser',
+                'groups',
+                'user_permissions'
+            )}
+        ),
+    )
+
+    add_fieldsets = (
+        (
+            None,
+            {'fields': (
+                'email', 'password', 'first_name', 'last_name', 'role',
+                'branch', 'is_staff', 'is_superuser'
+            )}
+        ),
     )
