@@ -5,7 +5,8 @@ from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
 from rest_framework.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404
 
-from .models import Shift, Branch, User, Invitation
+from .models import Shift, Branch, User, Invitation, Region
+from .permissions import IsManager
 from .serializers import (
     BranchSerializer, ShiftSerializer, UserSerializer,
     InvitationSerializer, UserRegistrationSerializer,
@@ -37,20 +38,28 @@ class ManagerRegistrationView(generics.CreateAPIView):
 
 class UserViewSet(viewsets.ReadOnlyModelViewSet):
     """
-    A viewset for viewing user profiles.
+    A viewset for viewing user profiles, with hierarchical permissions.
     """
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [IsAuthenticated]
 
-    @action(detail=False, methods=['get'])
-    def me(self, request):
-        """
-        Returns the details of the currently logged-in user.
-        """
-        user = request.user
-        serializer = self.get_serializer(user)
-        return Response(serializer.data)
+    def get_queryset(self):
+        user = self.request.user
+        queryset = super().get_queryset()
+
+        if user.is_staff or user.role == 'head_office':
+            # Head Office can see all users
+            return queryset
+        elif user.role == 'region_manager':
+            # Region managers can see employees in their region
+            return queryset.filter(region=user.region)
+        elif user.role == 'branch_manager':
+            # Branch managers can only see employees in their own branch
+            return queryset.filter(branch=user.branch)
+        
+        # Regular employees can only see their own profile
+        return queryset.filter(id=user.id)
 
 
 class BranchViewSet(viewsets.ReadOnlyModelViewSet):
@@ -129,7 +138,7 @@ class ShiftViewSet(viewsets.ModelViewSet):
     """
     queryset = Shift.objects.all()
     serializer_class = ShiftSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsManager]
 
     def get_queryset(self):
         """
@@ -138,13 +147,29 @@ class ShiftViewSet(viewsets.ModelViewSet):
         Employees can only see 'open' shifts.
         Managers can see all shifts.
 
-        Returns:
+        Returns: 
             QuerySet: The filtered queryset of Shift objects.
         """
-        if self.request.user.role == 'employee':
-            return self.queryset.filter(status='open')
+        user = self.request.user
+        queryset = super().get_queryset()
 
-        return self.queryset
+        if user.is_staff or user.role == 'head_office':
+            # Head Office can see all shifts
+            return queryset
+        elif user.role == 'region_manager':
+            # Region managers can see shifts for all branches in their region
+            return queryset.filter(branch__region=user.region)
+        elif user.role == 'branch_manager':
+            # Branch managers can only see shifts for their own branch
+            return queryset.filter(branch=user.branch)
+        elif user.role == 'employee':
+            # Employees can see shifts in their branch
+            return queryset.filter(branch=user.branch)
+        elif user.role == 'floating_employee':
+            # Floating employees can see shifts in their region
+            return queryset.filter(branch__region=user.region)
+
+        return Shift.objects.none()
 
     def perform_create(self, serializer):
         """
