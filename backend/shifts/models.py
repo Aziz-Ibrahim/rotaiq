@@ -5,6 +5,20 @@ from django.contrib.auth.models import (
 )
 
 
+class Region(models.Model):
+    """
+    A model to represent a business region.
+    A region can contain multiple branches.
+    """
+    name = models.CharField(
+        max_length=100, unique=True,
+        help_text="The unique name of the region."
+    )
+    
+    def __str__(self):
+        return self.name
+
+
 class Branch(models.Model):
     """
     Represents a business branch or location.
@@ -18,10 +32,21 @@ class Branch(models.Model):
     name = models.CharField(max_length=255, unique=True)
     address = models.TextField(blank=True)
 
+    region = models.ForeignKey(
+        Region,
+        on_delete=models.CASCADE,
+        related_name='branches',
+        null=True,
+        help_text="The region this branch belongs to."
+    )
+
     def __str__(self):
         """
-        Returns a string representation of the branch, which is its name.
+        Returns a string representation of the branch, which is its name
+        and the region it belongs to
         """
+        if self.region:
+            return f"{self.name} ({self.region.name})"
         return self.name
 
 
@@ -91,6 +116,7 @@ class UserManager(BaseUserManager):
         
         return self.create_user(email, password, **extra_fields)
 
+
 class User(AbstractBaseUser, PermissionsMixin):
     """
     A custom user model that uses email as the unique identifier.
@@ -101,8 +127,11 @@ class User(AbstractBaseUser, PermissionsMixin):
     and a foreign key to a `Branch`.
     """
     ROLE_CHOICES = (
-        ('manager', 'Manager'),
+        ('head_office', 'Head Office'),
+        ('region_manager', 'Region Manager'),
+        ('branch_manager', 'Branch Manager'),
         ('employee', 'Employee'),
+        ('floating_employee', 'Floating Employee'),
     )
 
     email = models.EmailField(
@@ -123,7 +152,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         help_text="The user's last name."
     )
     role = models.CharField(
-        max_length=10,
+        max_length=30,
         choices=ROLE_CHOICES,
         default='employee',
         help_text="The user's role (manager or employee)."
@@ -135,6 +164,14 @@ class User(AbstractBaseUser, PermissionsMixin):
         blank=True,
         related_name='employees',
         help_text="The branch the user is associated with."
+    )
+    region = models.ForeignKey(
+        'Region',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='managers',
+        help_text="The region a manager is associated with."
     )
     is_active = models.BooleanField(
         default=True,
