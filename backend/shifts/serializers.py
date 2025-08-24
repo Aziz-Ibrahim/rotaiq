@@ -2,7 +2,7 @@ from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.db import IntegrityError
 
-from .models import User, Branch, Shift, Invitation, Region
+from .models import *
 
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -227,6 +227,19 @@ class InvitationSerializer(serializers.ModelSerializer):
         read_only_fields = ['token', 'is_used', 'created_at']
 
 
+class ShiftClaimSerializer(serializers.ModelSerializer):
+    """
+    Serializes ShiftClaim model instances.
+    """
+    user = UserSerializer(read_only=True)  # Nested serializer for the user
+    shift = serializers.PrimaryKeyRelatedField(queryset=Shift.objects.all())
+
+    class Meta:
+        model = ShiftClaim
+        fields = ['id', 'shift', 'user', 'status', 'created_at']
+        read_only_fields = ['user', 'status', 'created_at']
+
+
 class ShiftSerializer(serializers.ModelSerializer):
     """
     Serializes Shift model instances for API operations.
@@ -240,21 +253,22 @@ class ShiftSerializer(serializers.ModelSerializer):
         A nested serializer to provide read-only details about the branch.
         posted_by_details (UserSerializer):
         A nested serializer for the user who posted the shift.
-        claimed_by_details (UserSerializer):
-        A nested serializer for the user who claimed the shift.
+        assigned_to_details (UserSerializer):
+        A nested serializer for the user who the shift is assigned to.
+        claims (ShiftClaimSerializer):
+        A nester serializer for the shift's claims
     """
     branch_details = BranchSerializer(source='branch', read_only=True)
     posted_by_details = UserSerializer(source='posted_by', read_only=True)
-    claimed_by_details = UserSerializer(source='claimed_by', read_only=True)
+    assigned_to_details = UserSerializer(source='assigned_to', read_only=True)
+    
+    claims = ShiftClaimSerializer(many=True, read_only=True)
 
     class Meta:
-        """
-        Meta options for the ShiftSerializer.
-        """
         model = Shift
         fields = [
             'id', 'branch', 'branch_details', 'posted_by', 'posted_by_details',
-            'claimed_by', 'claimed_by_details', 'start_time', 'end_time',
-            'role', 'status', 'description'
+            'start_time', 'end_time', 'role', 'status', 'description',
+            'assigned_to', 'assigned_to_details', 'claims'
         ]
-        read_only_fields = ['status', 'posted_by', 'claimed_by']
+        read_only_fields = ['status', 'posted_by', 'assigned_to', 'claims']

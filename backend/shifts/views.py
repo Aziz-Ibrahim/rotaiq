@@ -1,17 +1,14 @@
-from rest_framework import viewsets, mixins, status, generics
+from rest_framework import viewsets, mixins, status, generics, permissions
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
 from rest_framework.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404
+from django.db import transaction
 
-from .models import Shift, Branch, User, Invitation, Region
+from .models import *
 from .permissions import IsManager
-from .serializers import (
-    BranchSerializer, ShiftSerializer, UserSerializer,
-    InvitationSerializer, UserRegistrationSerializer,
-    ManagerRegistrationSerializer
-)
+from .serializers import *
 
 
 class UserRegistrationView(generics.CreateAPIView):
@@ -138,170 +135,181 @@ class ShiftViewSet(viewsets.ModelViewSet):
     """
     queryset = Shift.objects.all()
     serializer_class = ShiftSerializer
-    permission_classes = [IsAuthenticated, IsManager]
+    permission_classes = [IsManager]
 
     def get_queryset(self):
-        """
-        Filters the queryset based on the user's role.
-
-        Employees can only see 'open' shifts.
-        Managers can see all shifts.
-
-        Returns: 
-            QuerySet: The filtered queryset of Shift objects.
-        """
         user = self.request.user
         queryset = super().get_queryset()
 
         if user.is_staff or user.role == 'head_office':
-            # Head Office can see all shifts
             return queryset
         elif user.role == 'region_manager':
-            # Region managers can see shifts for all branches in their region
             return queryset.filter(branch__region=user.region)
         elif user.role == 'branch_manager':
-            # Branch managers can only see shifts for their own branch
             return queryset.filter(branch=user.branch)
         elif user.role == 'employee':
-            # Employees can see shifts in their branch
             return queryset.filter(branch=user.branch)
         elif user.role == 'floating_employee':
-            # Floating employees can see shifts in their region
-            return queryset.filter(branch__region=user.region)
+            if user.region:
+                return queryset.filter(branch__region=user.region)
 
         return Shift.objects.none()
 
-    def perform_create(self, serializer):
-        """
-        Creates a new shift instance.
-
-        This method ensures that only a manager can post a new shift. The
-        `posted_by` field is automatically set to the current user.
-
-        Args:
-            serializer (Serializer): The serializer instance for the new shift.
-        """
-        if self.request.user.role == 'manager':
-            serializer.save(posted_by=self.request.user, status='open')
-        else:
-            return Response(
-                {"detail": "You don't have permission to perform this action."},
-                status=status.HTTP_403_FORBIDDEN
-            )
-
-    @action(detail=True, methods=['post'])
+    @action(detail=True, methods=['post'],
+            permission_classes=[permissions.IsAuthenticated])
     def claim(self, request, pk=None):
         """
         Allows an employee to claim an open shift.
-
-        This action is only available to employees and updates the shift's
-        status to 'claimed'.
-
-        Args:
-            request (Request): The request object.
-            pk (int): The primary key of the shift to be claimed.
-
-        Returns:
-            Response:
-            A response containing the updated shift data or an error message.
         """
-        shift = self.get_object()
-        user = request.user
-
-        is_employee_and_shift_is_open = (
-            user.role == 'employee' and shift.status == 'open'
-        )
-
-        if is_employee_and_shift_is_open:
-            shift.claimed_by = user
-            shift.status = 'claimed'
-            shift.save()
-            return Response(self.get_serializer(shift).data)
-
-        return Response(
-            {"detail": "Unable to claim this shift."},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-
-    @action(detail=True, methods=['post'])
-    def approve(self, request, pk=None):
-        """
-        Allows a manager to approve a claimed shift.
-
-        This action is only available to the manager who originally posted
-        the shift and only if the shift's status is 'claimed'.
-
-        Args:
-            request (Request): The request object.
-            pk (int): The primary key of the shift to be approved.
-
-        Returns:
-            Response:
-            A response containing the updated shift data or an error message.
-        """
-        shift = self.get_object()
-        user = request.user
-
-        can_manager_approve_shift = (
-            user.role == 'manager' and
-            shift.status == 'claimed' and
-            shift.posted_by == user
-        )
-
-        if can_manager_approve_shift:
-            shift.status = 'approved'
-            shift.save()
-            return Response(self.get_serializer(shift).data)
-
-        return Response(
-            {"detail": "Unable to approve this shift."},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-
-    @action(detail=True, methods=['post'])
-    def decline(self, request, pk=None):
-        """
-        Allows a manager to decline a claimed shift.
-
-        This action is only available to the manager who originally posted
-        the shift and only if the shift's status is 'claimed'.
-        """
-        shift = self.get_object()
-        user = request.user
-
-        can_manager_decline_shift = (
-            user.role == 'manager' and
-            shift.status == 'claimed' and
-            shift.posted_by == user
-        )
-
-        if can_manager_decline_shift:
-            shift.status = 'open' # Changes the status back to 'open'
-            shift.claimed_by = None # Removes the employee's claim
-            shift.save()
-            return Response(self.get_serializer(shift).data)
-
-        return Response(
-            {"detail": "Unable to decline this shift."},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-    
-    @action(detail=False, methods=['get'])
-    def my_approved_shifts(self, request):
-        """
-        Lists shifts that have been claimed and approved by the current
-        employee.
-        """
-        user = request.user
-        if user.role != 'employee':
+        try:
+            shift = self.get_object()
+        except Shift.DoesNotExist:
             return Response(
-                {"detail": "This endpoint is for employees only."},
+                {'error': 'Shift not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        user = request.user
+
+        if shift.status != 'open':
+            return Response(
+                {'error': 'This shift is not open for claims.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if user.role == 'employee' and user.branch != shift.branch:
+            return Response(
+                {'error': 'You can only claim shifts at your own branch.'},
                 status=status.HTTP_403_FORBIDDEN
             )
-        
-        approved_shifts = Shift.objects.filter(
-            claimed_by=user, 
-            status='approved'
+
+        if (user.role == 'floating_employee' and user.region and
+                user.region != shift.branch.region):
+            return Response(
+                {'error': 'You can only claim shifts in your region.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        with transaction.atomic():
+            claim, created = ShiftClaim.objects.get_or_create(
+                shift=shift,
+                user=user
+            )
+            if not created:
+                return Response(
+                    {'message': 'You have already claimed this shift.'},
+                    status=status.HTTP_200_OK
+                )
+
+            shift.status = 'claimed'
+            shift.save()
+
+        serializer = ShiftClaimSerializer(claim)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['post'],
+            permission_classes=[IsManager], lookup_field='pk')
+    def approve(self, request, pk=None):
+        """
+        Allows a manager to approve a shift claim.
+        """
+        try:
+            claim = ShiftClaim.objects.get(id=pk)
+            shift = claim.shift
+        except ShiftClaim.DoesNotExist:
+            return Response(
+                {'error': 'Claim not found.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        user = request.user
+
+        if user.role == 'branch_manager' and user.branch != shift.branch:
+            return Response(
+                {'error': 'You can only approve shifts in your own branch.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        if (user.role == 'region_manager' and user.region and
+                user.region != shift.branch.region):
+            return Response(
+                {'error': 'You can only approve shifts in your own region.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        if claim.status != 'pending' or shift.status == 'filled':
+            return Response(
+                {'error': 'This claim cannot be approved.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        with transaction.atomic():
+            claim.status = 'approved'
+            claim.save()
+
+            shift.status = 'filled'
+            shift.assigned_to = claim.user
+            shift.save()
+
+            ShiftClaim.objects.filter(
+                shift=shift,
+                status='pending'
+            ).exclude(id=claim.id).update(status='declined')
+
+        return Response(
+            {'message': 'Shift claim approved.'},
+            status=status.HTTP_200_OK
         )
-        serializer = self.get_serializer(approved_shifts, many=True)
-        return Response(serializer.data)
+
+    @action(detail=True, methods=['post'],
+            permission_classes=[IsManager], lookup_field='pk')
+    def decline(self, request, pk=None):
+        """
+        Allows a manager to decline a shift claim.
+        """
+        try:
+            claim = ShiftClaim.objects.get(id=pk)
+            shift = claim.shift
+        except ShiftClaim.DoesNotExist:
+            return Response(
+                {'error': 'Claim not found.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        user = request.user
+
+        if user.role == 'branch_manager' and user.branch != shift.branch:
+            return Response(
+                {'error': 'You can only decline shifts in your own branch.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        if (user.role == 'region_manager' and user.region and
+                user.region != shift.branch.region):
+            return Response(
+                {'error': 'You can only decline shifts in your own region.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        if claim.status != 'pending':
+            return Response(
+                {'error': 'This claim cannot be declined.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        with transaction.atomic():
+            claim.status = 'declined'
+            claim.save()
+
+            if (shift.status == 'claimed' and not
+                    ShiftClaim.objects.filter(
+                        shift=shift,
+                        status='pending'
+                    ).exists()):
+                shift.status = 'open'
+                shift.save()
+
+        return Response(
+            {'message': 'Shift claim declined.'},
+            status=status.HTTP_200_OK
+        )

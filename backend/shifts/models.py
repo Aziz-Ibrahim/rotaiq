@@ -1,5 +1,6 @@
 import uuid
 from django.db import models
+from django.conf import settings
 from django.contrib.auth.models import (
     AbstractBaseUser, BaseUserManager, PermissionsMixin
 )
@@ -36,7 +37,6 @@ class Branch(models.Model):
         Region,
         on_delete=models.CASCADE,
         related_name='branches',
-        null=True,
         help_text="The region this branch belongs to."
     )
 
@@ -143,12 +143,12 @@ class User(AbstractBaseUser, PermissionsMixin):
     )
     first_name = models.CharField(
         max_length=50,
-        blank=True,
+        blank=False,
         help_text="The user's first name."
     )
     last_name = models.CharField(
         max_length=50,
-        blank=True,
+        blank=False,
         help_text="The user's last name."
     )
     role = models.CharField(
@@ -233,42 +233,75 @@ class Shift(models.Model):
         ).
         description (str): A brief description of the shift.
     """
-    STATUS_CHOICES = (
+    SHIFT_STATUS_CHOICES = (
         ('open', 'Open'),
         ('claimed', 'Claimed'),
-        ('approved', 'Approved'),
-        ('closed', 'Closed'),
+        ('filled', 'Filled'),
     )
 
     branch = models.ForeignKey(
-        Branch,
+        'Branch',
         on_delete=models.CASCADE,
         related_name='shifts'
     )
     posted_by = models.ForeignKey(
-        User,
+        settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name='posted_shifts'
-    )
-    claimed_by = models.ForeignKey(
-        User,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='claimed_shifts'
     )
     start_time = models.DateTimeField()
     end_time = models.DateTimeField()
     role = models.CharField(max_length=100)
+    description = models.TextField(blank=True)    
     status = models.CharField(
         max_length=20,
-        choices=STATUS_CHOICES,
+        choices=SHIFT_STATUS_CHOICES,
         default='open'
     )
-    description = models.TextField(blank=True)
+    assigned_to = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='assigned_shifts'
+    )
 
     def __str__(self):
         """
         Returns a human-readable string for the shift instance.
         """
         return f"{self.role} shift at {self.branch.name} on {self.start_time.date()}"
+
+
+class ShiftClaim(models.Model):
+    """
+    Represents an employee's claim on a specific shift.
+    """
+    CLAIM_STATUS_CHOICES = (
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('declined', 'Declined'),
+    )
+    shift = models.ForeignKey(
+        'Shift',
+        on_delete=models.CASCADE,
+        related_name='claims'
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='shift_claims'
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=CLAIM_STATUS_CHOICES,
+        default='pending'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        # Ensures a user can only claim a specific shift once
+        unique_together = ('shift', 'user')
+
+    def __str__(self):
+        return f"{self.user.get_full_name()} - {self.shift} ({self.status})"
