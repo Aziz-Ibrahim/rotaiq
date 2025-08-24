@@ -2,7 +2,7 @@ from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.db import IntegrityError
 
-from .models import User, Branch, Shift, Invitation
+from .models import User, Branch, Shift, Invitation, Region
 
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -160,6 +160,18 @@ class ManagerRegistrationSerializer(serializers.ModelSerializer):
             )
 
 
+class RegionSerializer(serializers.ModelSerializer):
+    """
+    Serializes Region model instances into a JSON format.
+    """
+    class Meta:
+        """
+        Meta options for the RegionSerializer.
+        """
+        model = Region
+        fields = '__all__'
+
+
 class BranchSerializer(serializers.ModelSerializer):
     """
     Serializes Branch model instances into a JSON format.
@@ -167,6 +179,8 @@ class BranchSerializer(serializers.ModelSerializer):
     This serializer is used to represent branch data in the API. It includes
     all fields from the Branch model.
     """
+    region = RegionSerializer(read_only=True)
+
     class Meta:
         """
         Meta options for the BranchSerializer.
@@ -194,7 +208,11 @@ class UserSerializer(serializers.ModelSerializer):
         Meta options for the UserSerializer.
         """
         model = User
-        fields = ['id', 'email', 'first_name', 'last_name', 'role', 'branch']
+        fields = [
+            'id', 'email', 'first_name', 'last_name', 'role', 'branch',
+            'region'
+        ]
+        read_only_fields = ('email', 'role', 'branch', 'region')
 
 
 class InvitationSerializer(serializers.ModelSerializer):
