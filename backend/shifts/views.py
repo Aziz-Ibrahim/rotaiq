@@ -155,6 +155,13 @@ class ShiftViewSet(viewsets.ModelViewSet):
 
         return Shift.objects.none()
 
+    def perform_create(self, serializer):
+        """
+        Assigns the currently authenticated user as the 'posted_by' of the new
+        shift.
+        """
+        serializer.save(posted_by=self.request.user)
+
     @action(detail=True, methods=['post'],
             permission_classes=[permissions.IsAuthenticated])
     def claim(self, request, pk=None):

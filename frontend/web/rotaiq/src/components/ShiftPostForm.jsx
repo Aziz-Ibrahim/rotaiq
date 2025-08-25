@@ -15,20 +15,52 @@ const ShiftPostForm = ({ onUpdate }) => {
             role: '',
             description: '',
         },
+        validate: {
+            start_time: (value) => (value && new Date(value) > new Date() ? null : 'Start time cannot be in the past'),
+            end_time: (value, values) => {
+                if (!value) {
+                    return 'End time is required';
+                }
+                if (new Date(value) <= new Date(values.start_time)) {
+                    return 'End time must be after start time';
+                }
+                return null;
+            },
+            role: (value) => (value ? null : 'Role is required'),
+            description: (value) => (value ? null : 'Description is required'),
+        },
     });
 
     const handleSubmit = async (values) => {
         try {
-            if (!user || !user.branch_id) {
-                console.error("User not authenticated.");
+            // Check for both user and user.id
+            if (!user || !user.branch?.id || !user.id) {
+                console.error("User not authenticated, branch ID, or user ID is missing. Cannot submit shift.");
                 return;
             }
-            const shiftData = { ...values, branch: user.branch_id };
+
+            const formattedStartTime = values.start_time ? new Date(values.start_time).toISOString() : null;
+            const formattedEndTime = values.end_time ? new Date(values.end_time).toISOString() : null;
+
+            const shiftData = {
+                start_time: formattedStartTime,
+                end_time: formattedEndTime,
+                role: values.role,
+                description: values.description,
+                branch: user.branch.id,
+                // Add the posted_by field
+                posted_by: user.id,
+            };
+
+            console.log("Submitting shift data:", shiftData);
             await apiClient.post('api/shifts/', shiftData);
+            
             form.reset();
-            onUpdate();
+            if (onUpdate) {
+                onUpdate();
+            }
         } catch (err) {
-            console.error("Error posting shift:", err);
+            console.error("Error posting shift:", err.response ? err.response.data : err.message);
         }
     };
 
@@ -39,7 +71,7 @@ const ShiftPostForm = ({ onUpdate }) => {
                 <Stack>
                     <TextInput
                         label="Your Branch ID"
-                        value={user?.branch_id || ''}
+                        value={user?.branch?.id || ''}
                         readOnly
                         disabled
                     />

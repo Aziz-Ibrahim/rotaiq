@@ -1,34 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import apiClient from '../api/apiClient';
-import ShiftList from './ShiftList';
-import { useAuth } from '../hooks/useAuth';
-import { Paper, Title } from '@mantine/core';
+import React from 'react';
+import { useShiftList } from '../hooks/useShiftList.jsx';
+import { Paper, Title, Text } from '@mantine/core';
+import ShiftList from './ShiftList.jsx';
 
 const EmployeeDashboard = () => {
-  const [shifts, setShifts] = useState([]);
-  const { user } = useAuth();
+    const { shifts, loading, error, fetchShifts } = useShiftList();
 
-  const fetchShifts = async () => {
-    try {
-      const response = await apiClient.get('api/shifts/');
-      setShifts(response.data);
-    } catch (error) {
-      console.error("Error fetching shifts:", error);
-    }
-  };
+    if (loading) return <Text>Loading shifts...</Text>;
+    if (error) return <Text color="red">Error: Failed to load shifts.</Text>;
 
-  useEffect(() => {
-    if (user) {
-      fetchShifts();
-    }
-  }, [user]);
-
-  return (
-    <Paper shadow="md" p="md" withBorder>
-      <Title order={2} mb="md">Available Shifts</Title>
-      <ShiftList shifts={shifts.filter(s => s.status === 'open' || s.claimed_by === user.user_id)} onUpdate={fetchShifts} />
-    </Paper>
-  );
+    return (
+        <Paper shadow="md" p="md" withBorder>
+            <Title order={2} mb="md">Available Shifts</Title>
+            <ShiftList shifts={shifts} onUpdate={fetchShifts} />
+        </Paper>
+    );
 };
 
 export default EmployeeDashboard;

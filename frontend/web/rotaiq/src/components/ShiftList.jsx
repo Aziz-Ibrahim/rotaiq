@@ -40,7 +40,9 @@ const ShiftList = ({ shifts, onUpdate }) => {
                 }
 
                 const isEmployee = user.role === 'employee';
-                const isManager = user.role === 'manager';
+                const isManager = user.role === 'manager' || user.role === 'branch_manager' || user.role === 'region_manager' || user.role === 'head_office';
+                
+                const isClaimedByMe = isEmployee && shift.claimed_by === user.id;
 
                 return (
                     <List.Item
@@ -61,7 +63,7 @@ const ShiftList = ({ shifts, onUpdate }) => {
                         )}
                         
                         <Group mt="md">
-                            {isEmployee && shift.status === 'open' && (
+                            {isEmployee && shift.status === 'open' && !isClaimedByMe && (
                                 <Button onClick={() => handleAction(shift.id, 'claim')}>Claim Shift</Button>
                             )}
                             
