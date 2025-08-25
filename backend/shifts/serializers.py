@@ -25,7 +25,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         token['email'] = user.email
         token['role'] = user.role
         token['branch_id'] = user.branch.id if user.branch else None
-        
+        token['id'] = user.id 
         return token
 
 

@@ -1,46 +1,74 @@
-import React, { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
-import ManagerDashboard from '../components/ManagerDashboard';
-import EmployeeDashboard from '../components/EmployeeDashboard';
-import { AppShell, Button, Group, Box, Text } from '@mantine/core';
+import React from 'react';
+import { useAuth } from '../hooks/useAuth.jsx';
+import { Container, Title, Text, Button } from '@mantine/core';
+
+// Placeholder components for each role's dashboard
+const HeadOfficeDashboard = () => (
+    <Container>
+        <Title order={2}>Head Office Dashboard</Title>
+        <Text>Welcome to the central control panel. You have administrative access to all branches and can manage system-wide settings.</Text>
+    </Container>
+);
+
+const ManagerDashboard = () => (
+    <Container>
+        <Title order={2}>Manager Dashboard</Title>
+        <Text>Manage your branch's team, schedule, and operations here. You can assign shifts and invite new employees.</Text>
+    </Container>
+);
+
+const EmployeeDashboard = () => (
+    <Container>
+        <Title order={2}>Employee Dashboard</Title>
+        <Text>View your upcoming shifts and manage your personal details.</Text>
+    </Container>
+);
+
+const NoRoleDashboard = () => (
+    <Container>
+        <Title order={2}>Access Denied</Title>
+        <Text>Your account does not have a defined role. Please contact your administrator for assistance.</Text>
+    </Container>
+);
 
 const Dashboard = () => {
-    const { user, loading, logout } = useAuth();
-    const navigate = useNavigate();
+    const { user, logout } = useAuth();
 
-    useEffect(() => {
-        if (!loading && !user) {
-            navigate('/login');
-        }
-    }, [user, loading, navigate]);
-
-    if (loading) {
+    // Show a loading state while fetching user data
+    if (!user) {
         return <Text>Loading...</Text>;
     }
 
-    if (!user) {
-        return null;
-    }
+    // Determine which component to render based on the user's role
+    const renderDashboard = () => {
+        switch (user.role) {
+            case 'head_office':
+                return <HeadOfficeDashboard />;
+            case 'manager':
+                return <ManagerDashboard />;
+            case 'employee':
+                return <EmployeeDashboard />;
+            default:
+                return <NoRoleDashboard />;
+        }
+    };
 
     return (
-        <AppShell
-            padding="md"
-            header={{ height: 60 }}
-        >
-            <AppShell.Header>
-                <Group h="100%" px="md" position="apart">
-                    <Text size="xl" weight={700}>Welcome, {user.first_name}!</Text>
-                    <Button onClick={logout}>Logout</Button>
-                </Group>
-            </AppShell.Header>
-            <AppShell.Main>
-                <Box p="lg">
-                    {user.role === 'manager' && <ManagerDashboard />}
-                    {user.role === 'employee' && <EmployeeDashboard />}
-                </Box>
-            </AppShell.Main>
-        </AppShell>
+        <Container size="md" my={40}>
+            <Title align="center">
+                Hello, {user.first_name}!
+            </Title>
+            <Text align="center" mt="md" mb="lg">
+                Your role is: {user.role}
+            </Text>
+            
+            {/* Render the dashboard based on the user's role */}
+            {renderDashboard()}
+
+            <Button onClick={logout} mt="xl" fullWidth>
+                Logout
+            </Button>
+        </Container>
     );
 };
 
