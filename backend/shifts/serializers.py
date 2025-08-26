@@ -272,3 +272,11 @@ class ShiftSerializer(serializers.ModelSerializer):
             'assigned_to', 'assigned_to_details', 'claims'
         ]
         read_only_fields = ['status', 'posted_by', 'assigned_to', 'claims']
+
+
+class AnalyticsSerializer(serializers.Serializer):
+    """
+    A dummy serializer for the AnalyticsViewSet.
+    """
+    class Meta:
+        fields = []

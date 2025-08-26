@@ -3,8 +3,10 @@ import { useUserList } from '../hooks/useUserList.jsx';
 import { useShiftList } from '../hooks/useShiftList.jsx';
 import { Container, Title, Text, Paper, List, Grid } from '@mantine/core';
 
+// Import the new components
 import ShiftList from './ShiftList.jsx';
 import ShiftPostForm from './ShiftPostForm.jsx';
+import ReportsDashboard from './ReportsDashboard.jsx';
 
 const UserList = ({ users, title }) => (
     <Paper withBorder shadow="md" p="md" mt="lg">
@@ -40,6 +42,7 @@ const ManagerDashboard = () => {
                     <UserList users={userList} title="Your Branch Team" />
                 </Grid.Col>
                 <Grid.Col span={{ base: 12, md: 8 }}>
+                    <ReportsDashboard />
                     <Paper shadow="md" p="md" withBorder>
                         <Title order={2} mb="md">All Shifts</Title>
                         <ShiftList shifts={shifts} onUpdate={fetchShifts} />

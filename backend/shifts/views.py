@@ -5,7 +5,7 @@ from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
 from rest_framework.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Q, Count
 
 from .models import *
 from .permissions import IsManagerOrReadOnly
@@ -335,3 +335,55 @@ class ShiftViewSet(viewsets.ModelViewSet):
             {'message': 'Shift claim declined.'},
             status=status.HTTP_200_OK
         )
+
+
+class AnalyticsViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    A ViewSet for providing read-only analytical reports.
+
+    This viewset is designed to provide business insights to manager-level
+    users by performing aggregate queries on shift data. It does not
+    handle creation, update, or deletion of shifts.
+    """
+    permission_classes = [IsAuthenticated]
+    queryset = None
+    serializer_class = AnalyticsSerializer
+
+    def get_queryset(self):
+        """
+        Returns an empty queryset to satisfy the DefaultRouter.
+        All data is returned via custom actions.
+        """
+        return Shift.objects.none()
+
+    @action(detail=False, methods=['get'])
+    def open_shifts_by_branch(self, request):
+        """
+        Returns a count of open shifts for each branch, filtered by user role.
+        """
+        user = self.request.user
+        
+        # Base queryset for open shifts
+        queryset = Shift.objects.filter(status='open')
+
+        # Filter based on user role
+        if user.role == 'branch_manager':
+            queryset = queryset.filter(branch=user.branch)
+        elif user.role == 'region_manager':
+            queryset = queryset.filter(branch__region=user.region)
+        elif user.role != 'head_office' and not user.is_staff:
+            # Deny access for employees and other roles
+            return Response(
+                {
+                    "detail":
+                    "You do not have permission to perform this action."
+                },
+                status=403,
+            )
+        
+        # Group by branch and count
+        data = queryset.values('branch__name').annotate(
+            open_shift_count=Count('id')
+        ).order_by('branch__name')
+        
+        return Response(data)
