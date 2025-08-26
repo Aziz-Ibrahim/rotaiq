@@ -5,6 +5,7 @@ from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
 from rest_framework.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404
 from django.db import transaction
+from django.db.models import Q
 
 from .models import *
 from .permissions import IsManagerOrReadOnly
@@ -139,21 +140,35 @@ class ShiftViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        queryset = super().get_queryset()
+        queryset = Shift.objects.all()
 
         if user.is_staff or user.role == 'head_office':
-            return queryset
+            # Staff and HQ see all shifts
+            return queryset.order_by('-start_time')
         elif user.role == 'region_manager':
-            return queryset.filter(branch__region=user.region)
+            # Region manager sees all shifts within their region
+            return queryset.filter(
+                branch__region=user.region
+            ).order_by('-start_time')
         elif user.role == 'branch_manager':
-            return queryset.filter(branch=user.branch)
+            # Branch manager sees all shifts within their branch
+            return queryset.filter(branch=user.branch).order_by('-start_time')
         elif user.role == 'employee':
-            return queryset.filter(branch=user.branch)
+            # Employee sees open shifts in their branch, plus shifts they
+            # claimed/approved
+            return queryset.filter(
+                Q(branch=user.branch, status='open') | Q(claimed_by=user)
+            ).order_by('-start_time')
         elif user.role == 'floating_employee':
             if user.region:
-                return queryset.filter(branch__region=user.region)
+                # Floating employee sees open shifts in their region,
+                # plus shifts they claimed/approved
+                return queryset.filter(
+                    Q(branch__region=user.region, status='open') |
+                    Q(claimed_by=user)
+                ).order_by('-start_time')
 
-        return Shift.objects.none()
+        return Shift.objects.none()  # Return no shifts for undefined roles
 
     def perform_create(self, serializer):
         """
