@@ -11,11 +11,12 @@ import { MantineProvider } from '@mantine/core';
 import '@mantine/core/styles.css';
 import '@mantine/dates/styles.css';
 import './index.css';
+import { theme } from './theme.js'; 
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <BrowserRouter>
-      <MantineProvider>
+      <MantineProvider theme={theme}>
         <Routes>
           <Route path="/" element={<App />}>
             <Route index element={<Login />} />
