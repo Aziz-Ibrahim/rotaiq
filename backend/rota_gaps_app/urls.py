@@ -17,6 +17,7 @@ class MyTokenObtainPairView(TokenObtainPairView):
 router = DefaultRouter()
 router.register(r'users', views.UserViewSet)
 router.register(r'shifts', views.ShiftViewSet)
+router.register(r'regions', views.RegionViewSet)
 router.register(r'branches', views.BranchViewSet)
 router.register(r'invitations', views.InvitationViewSet)
 router.register(r'analytics', views.AnalyticsViewSet, basename='analytics')

@@ -1,58 +1,45 @@
+// src/components/Dashboard.jsx
 import React from 'react';
-import { useAuth } from '../hooks/useAuth.jsx';
-import { Container, Title, Text, Button } from '@mantine/core';
+import { useAuth } from '../hooks/useAuth';
+import { Text } from '@mantine/core';
 
-// Import the role-specific dashboard components
-import HeadOfficeDashboard from '../components/HeadOfficeDashboard.jsx';
-import ManagerDashboard from '../components/ManagerDashboard.jsx';
-import EmployeeDashboard from '../components/EmployeeDashboard.jsx';
-import NoRoleDashboard from '../components/NoRoleDashboard.jsx';
-
-// New import for the RegionManagerDashboard
-import RegionManagerDashboard from '../components/RegionManagerDashboard.jsx';
+// Import all dashboard components
+import EmployeeDashboard from '../components/EmployeeDashboard';
+import FloatingEmployeeDashboard from '../components/FloatingEmployeeDashboard';
+import ManagerDashboard from '../components/ManagerDashboard';
+import RegionManagerDashboard from '../components/RegionManagerDashboard';
+import HeadOfficeDashboard from '../components/HeadOfficeDashboard';
 
 const Dashboard = () => {
-    const { user, logout, loading: authLoading } = useAuth();
+    const { user, loading } = useAuth();
 
-    if (authLoading) {
-        return <Text>Loading user data...</Text>;
+    if (loading) {
+        return <Text>Loading...</Text>;
     }
 
     if (!user) {
-        return <NoRoleDashboard />;  //TODO: redirect to login
+        return <Text>Please log in to view the dashboard.</Text>;
     }
 
+    // Conditionally render the correct dashboard based on user role
     const renderDashboard = () => {
         switch (user.role) {
-            case 'head_office':
-                return <HeadOfficeDashboard />;
-            case 'region_manager':
-                return <RegionManagerDashboard />;
-            case 'manager':
-            case 'branch_manager':
-                return <ManagerDashboard />;
             case 'employee':
                 return <EmployeeDashboard />;
+            case 'floating_employee':
+                return <FloatingEmployeeDashboard />;
+            case 'branch_manager':
+                return <ManagerDashboard />;
+            case 'region_manager':
+                return <RegionManagerDashboard />;
+            case 'head_office':
+                return <HeadOfficeDashboard />;
             default:
-                return <NoRoleDashboard />;
+                return <Text>Your user role does not have an assigned dashboard.</Text>;
         }
     };
 
-    return (
-        <Container size="md" my={40}>
-            <Title align="center">
-                Hello, {user.first_name}!
-            </Title>
-            <Text align="center" mt="md" mb="lg">
-                Your role is: {user.role}
-            </Text>
-            
-            {renderDashboard()}
-
-            <Button onClick={logout} mt="xl" fullWidth>
-                Logout</Button>
-        </Container>
-    );
+    return renderDashboard();
 };
 
 export default Dashboard;

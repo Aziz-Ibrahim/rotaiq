@@ -6,6 +6,8 @@ from rest_framework.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404
 from django.db import transaction
 from django.db.models import Q, Count
+from django.db.models.expressions import F
+from django.contrib.auth import get_user_model
 
 from .models import *
 from .permissions import IsManagerOrReadOnly
@@ -34,9 +36,11 @@ class ManagerRegistrationView(generics.CreateAPIView):
     permission_classes = [AllowAny]
 
 
-class UserViewSet(viewsets.ReadOnlyModelViewSet):
+User = get_user_model()
+
+class UserViewSet(viewsets.ModelViewSet):
     """
-    A viewset for viewing user profiles, with hierarchical permissions.
+    A viewset that provides the standard actions for User models.
     """
     queryset = User.objects.all()
     serializer_class = UserSerializer
@@ -58,6 +62,21 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
         
         # Regular employees can only see their own profile
         return queryset.filter(id=user.id)
+    
+    @action(detail=False, methods=['get'], url_path='me')
+    def get_me(self, request):
+        user = request.user
+        serializer = self.get_serializer(user)
+        return Response(serializer.data)
+
+
+class RegionViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    A viewset to provide read-only access to Region data.
+    """
+    queryset = Region.objects.all().order_by('name')
+    serializer_class = RegionSerializer
+    permission_classes = [permissions.IsAuthenticated]
 
 
 class BranchViewSet(viewsets.ReadOnlyModelViewSet):
@@ -67,9 +86,30 @@ class BranchViewSet(viewsets.ReadOnlyModelViewSet):
     This viewset provides read-only operations on the Branch model, such as
     listing all branches or retrieving a single branch's details.
     """
-    queryset = Branch.objects.all()
+    queryset = Branch.objects.none()
     serializer_class = BranchSerializer
     permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        queryset = Branch.objects.all().order_by('name')
+        
+        # Filter by region if a region_id is provided in the query params.
+        region_id = self.request.query_params.get('region_id')
+        if region_id:
+            queryset = queryset.filter(region__id=region_id)
+
+        # Filter branches based on the user's role.
+        if user.role == 'region_manager':
+            # Region manager sees all branches within their region.
+            if user.region:
+                queryset = queryset.filter(region=user.region)
+        elif user.role == 'branch_manager':
+            # Branch manager sees only their own branch.
+            if user.branch:
+                queryset = queryset.filter(pk=user.branch.pk)
+
+        return queryset
 
 
 class InvitationViewSet(
@@ -338,53 +378,44 @@ class ShiftViewSet(viewsets.ModelViewSet):
         )
 
 
-class AnalyticsViewSet(viewsets.ReadOnlyModelViewSet):
+class AnalyticsViewSet(viewsets.ViewSet):
     """
-    A ViewSet for providing read-only analytical reports.
-
-    This viewset is designed to provide business insights to manager-level
-    users by performing aggregate queries on shift data. It does not
-    handle creation, update, or deletion of shifts.
+    A viewset for providing shift-related analytics.
     """
-    permission_classes = [IsAuthenticated]
-    queryset = None
-    serializer_class = AnalyticsSerializer
+    permission_classes = [permissions.IsAuthenticated]
 
-    def get_queryset(self):
-        """
-        Returns an empty queryset to satisfy the DefaultRouter.
-        All data is returned via custom actions.
-        """
+    # New method to get the base queryset based on user role
+    def get_base_queryset(self):
+        user = self.request.user
+        queryset = Shift.objects.all()
+
+        if user.role == 'branch_manager':
+            return queryset.filter(branch=user.branch)
+        elif user.role == 'region_manager':
+            return queryset.filter(branch__region=user.region)
+        elif user.is_staff or user.role == 'head_office':
+            return queryset
+        
         return Shift.objects.none()
 
+    # This is a key action that counts open shifts by branch
     @action(detail=False, methods=['get'])
     def open_shifts_by_branch(self, request):
-        """
-        Returns a count of open shifts for each branch, filtered by user role.
-        """
-        user = self.request.user
-        
-        # Base queryset for open shifts
-        queryset = Shift.objects.filter(status='open')
+        queryset = self.get_base_queryset().filter(status='open')
 
-        # Filter based on user role
-        if user.role == 'branch_manager':
-            queryset = queryset.filter(branch=user.branch)
-        elif user.role == 'region_manager':
-            queryset = queryset.filter(branch__region=user.region)
-        elif user.role != 'head_office' and not user.is_staff:
-            # Deny access for employees and other roles
-            return Response(
-                {
-                    "detail":
-                    "You do not have permission to perform this action."
-                },
-                status=403,
-            )
-        
-        # Group by branch and count
-        data = queryset.values('branch__name').annotate(
-            open_shift_count=Count('id')
-        ).order_by('branch__name')
+        # Apply additional filtering for Head Office and Region Managers
+        region_id = request.query_params.get('region_id')
+        branch_id = request.query_params.get('branch_id')
+
+        if branch_id:
+            queryset = queryset.filter(branch__id=branch_id)
+        elif region_id:
+            queryset = queryset.filter(branch__region__id=region_id)
+
+        # The corrected query
+        data = queryset.values(
+            name=F('branch__name')
+            ).annotate(value=Count('branch')).order_by('branch__name')
         
         return Response(data)
+

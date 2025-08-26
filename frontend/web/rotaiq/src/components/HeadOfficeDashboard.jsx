@@ -1,31 +1,85 @@
-import React from 'react';
-import { useUserList } from '../hooks/useUserList.jsx';
-import { Container, Title, Text, Paper, List } from '@mantine/core';
-
-const UserList = ({ users, title }) => (
-    <Paper withBorder shadow="md" p="md" mt="lg">
-        <Title order={3}>{title}</Title>
-        <List mt="sm">
-            {users.map((u) => (
-                <List.Item key={u.id}>
-                    {u.first_name} {u.last_name} ({u.role})
-                </List.Item>
-            ))}
-        </List>
-    </Paper>
-);
+import React, { useState } from 'react';
+import { Container, Title, Text, Paper, Select, Grid } from '@mantine/core';
+import { useAuth } from '../hooks/useAuth';
+import { useRegionList } from '../hooks/useRegionList';
+import { useBranchList } from '../hooks/useBranchList';
+import { useAnalytics } from '../hooks/useAnalytics';
+import ReportsDashboard from './ReportsDashboard';
 
 const HeadOfficeDashboard = () => {
-    const { userList, loading, error } = useUserList();
+    const { user, loading: userLoading } = useAuth();
+    const { regions, loading: regionsLoading } = useRegionList();
+    const [selectedRegionId, setSelectedRegionId] = useState(null);
+    const [selectedBranchId, setSelectedBranchId] = useState(null);
 
-    if (loading) return <Text>Loading user data...</Text>;
-    if (error) return <Text color="red">{error}</Text>;
+    // Fetch branches based on the selected region
+    const { branches, loading: branchesLoading } = useBranchList(selectedRegionId);
+    
+    // Fetch analytics data, filtered by region and branch
+    const { data: openShiftsData, loading: analyticsLoading, error: analyticsError } = useAnalytics(
+        'open_shifts_by_branch',
+        { region_id: selectedRegionId, branch_id: selectedBranchId }
+    );
+    
+    const regionsForSelect = regions.map(region => ({
+        value: region.id.toString(),
+        label: region.name,
+    }));
+    
+    const branchesForSelect = branches.map(branch => ({
+        value: branch.id.toString(),
+        label: branch.name,
+    }));
+
+    // Reset branch filter when region changes
+    const handleRegionChange = (value) => {
+        setSelectedRegionId(value);
+        setSelectedBranchId(null); 
+    };
+
+    if (userLoading || regionsLoading || branchesLoading) {
+        return <Text>Loading dashboard data...</Text>;
+    }
 
     return (
         <Container>
             <Title order={2}>Head Office Dashboard</Title>
-            <Text>Welcome to the central control panel. You have administrative access to all branches and can manage system-wide settings.</Text>
-            <UserList users={userList} title="All Users" />
+            <Text>View all reports and filter by region or branch.</Text>
+            
+            <Grid mt="lg">
+                <Grid.Col span={{ base: 12, md: 6 }}>
+                    <Paper shadow="md" p="md" withBorder>
+                        <Title order={3} mb="md">Analytics Filters</Title>
+                        <Select
+                            label="Filter by Region"
+                            placeholder="All Regions"
+                            data={regionsForSelect}
+                            value={selectedRegionId}
+                            onChange={handleRegionChange}
+                            clearable
+                            mb="md"
+                        />
+                        <Select
+                            label="Filter by Branch"
+                            placeholder="All Branches"
+                            data={branchesForSelect}
+                            value={selectedBranchId}
+                            onChange={setSelectedBranchId}
+                            clearable
+                            disabled={!selectedRegionId && branches.length === 0}
+                        />
+                    </Paper>
+                </Grid.Col>
+                <Grid.Col span={{ base: 12, md: 6 }}>
+                    {/* Pass the data, loading, and error props to ReportsDashboard */}
+                    <ReportsDashboard 
+                        title="Open Shifts by Branch" 
+                        data={openShiftsData} 
+                        loading={analyticsLoading} 
+                        error={analyticsError}
+                    />
+                </Grid.Col>
+            </Grid>
         </Container>
     );
 };
