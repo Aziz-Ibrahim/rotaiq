@@ -1,14 +1,22 @@
 from rest_framework import permissions
 
-class IsManager(permissions.BasePermission):
+class IsManagerOrReadOnly(permissions.BasePermission):
     """
-    Custom permission to allow only managers to create/edit shifts.
+    Custom permission to only allow managers to create, update
+    or delete shifts.
+    Read-only access is allowed for all authenticated users.
     """
     def has_permission(self, request, view):
-        # Check if the user is authenticated and has a manager-level role
-        if not request.user.is_authenticated:
-            return False
-
-        return request.user.role in [
-            'head_office', 'region_manager', 'branch_manager'
-        ]
+        # Allow GET, HEAD, or OPTIONS requests for all authenticated users
+        if request.method in permissions.SAFE_METHODS:
+            return request.user and request.user.is_authenticated
+        
+        # Write permissions are only allowed for managers
+        return (request.user and 
+                request.user.is_authenticated and 
+                request.user.role in [
+                    'manager', 
+                    'branch_manager', 
+                    'region_manager', 
+                    'head_office'
+                ])

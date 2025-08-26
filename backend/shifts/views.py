@@ -7,7 +7,7 @@ from django.shortcuts import get_object_or_404
 from django.db import transaction
 
 from .models import *
-from .permissions import IsManager
+from .permissions import IsManagerOrReadOnly
 from .serializers import *
 
 
@@ -135,7 +135,7 @@ class ShiftViewSet(viewsets.ModelViewSet):
     """
     queryset = Shift.objects.all()
     serializer_class = ShiftSerializer
-    permission_classes = [IsManager]
+    permission_classes = [IsManagerOrReadOnly]
 
     def get_queryset(self):
         user = self.request.user
@@ -215,7 +215,7 @@ class ShiftViewSet(viewsets.ModelViewSet):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=['post'],
-            permission_classes=[IsManager], lookup_field='pk')
+            permission_classes=[IsManagerOrReadOnly], lookup_field='pk')
     def approve(self, request, pk=None):
         """
         Allows a manager to approve a shift claim.
@@ -269,7 +269,7 @@ class ShiftViewSet(viewsets.ModelViewSet):
         )
 
     @action(detail=True, methods=['post'],
-            permission_classes=[IsManager], lookup_field='pk')
+            permission_classes=[IsManagerOrReadOnly], lookup_field='pk')
     def decline(self, request, pk=None):
         """
         Allows a manager to decline a shift claim.
