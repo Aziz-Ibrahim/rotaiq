@@ -4,7 +4,8 @@ import { useAuth } from './useAuth.jsx';
 
 /**
  * A custom hook to fetch a list of shifts for the authenticated user.
- * It handles loading and error states and provides a function to manually refresh the list.
+ * It handles loading and error states and provides a function to manually
+ * refresh the list.
  */
 export const useShiftList = () => {
     const { user, loading: authLoading } = useAuth();
@@ -13,15 +14,13 @@ export const useShiftList = () => {
     const [error, setError] = useState(null);
 
     const fetchShifts = async () => {
-        if (!user) {
-            setLoading(false);
-            return;
-        }
+        if (!user || authLoading) return;
 
         setLoading(true);
         setError(null);
         try {
-            // The backend's get_queryset will handle filtering shifts based on the user's role
+            // The backend's get_queryset will handle filtering shifts based on
+            // the user's role
             const response = await apiClient.get('api/shifts/');
             setShifts(response.data);
         } catch (err) {
@@ -33,9 +32,7 @@ export const useShiftList = () => {
     };
 
     useEffect(() => {
-        if (!authLoading && user) {
-            fetchShifts();
-        }
+        fetchShifts();
     }, [user, authLoading]);
 
     return { shifts, loading, error, fetchShifts };

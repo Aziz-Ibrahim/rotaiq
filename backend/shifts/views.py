@@ -142,17 +142,15 @@ class ShiftViewSet(viewsets.ModelViewSet):
         user = self.request.user
         queryset = Shift.objects.all()
 
-        if user.is_staff or user.role == 'head_office':
-            # Staff and HQ see all shifts
-            return queryset.order_by('-start_time')
+        # Check for specific roles first, then broad ones.
+        if user.role == 'branch_manager':
+            # Branch manager sees all shifts within their branch
+            return queryset.filter(branch=user.branch).order_by('-start_time')
         elif user.role == 'region_manager':
             # Region manager sees all shifts within their region
             return queryset.filter(
                 branch__region=user.region
             ).order_by('-start_time')
-        elif user.role == 'branch_manager':
-            # Branch manager sees all shifts within their branch
-            return queryset.filter(branch=user.branch).order_by('-start_time')
         elif user.role == 'employee':
             # Employee sees open shifts in their branch, plus shifts they
             # claimed/approved
@@ -167,6 +165,9 @@ class ShiftViewSet(viewsets.ModelViewSet):
                     Q(branch__region=user.region, status='open') |
                     Q(claimed_by=user)
                 ).order_by('-start_time')
+        elif user.is_staff or user.role == 'head_office':
+            # Staff and HQ see all shifts (this check should be last)
+            return queryset.order_by('-start_time')
 
         return Shift.objects.none()  # Return no shifts for undefined roles
 

@@ -38,11 +38,11 @@ const ManagerDashboard = () => {
                     <Paper shadow="md" p="md" withBorder>
                         <ShiftPostForm onUpdate={fetchShifts} />
                     </Paper>
-                    {/* Display the user list */}
                     <UserList users={userList} title="Your Branch Team" />
                 </Grid.Col>
                 <Grid.Col span={{ base: 12, md: 8 }}>
-                    <ReportsDashboard />
+                    {/* Render ReportsDashboard only after the shifts data is loaded */}
+                    {!shiftsLoading && <ReportsDashboard shifts={shifts} />}
                     <Paper shadow="md" p="md" withBorder>
                         <Title order={2} mb="md">All Shifts</Title>
                         <ShiftList shifts={shifts} onUpdate={fetchShifts} />
