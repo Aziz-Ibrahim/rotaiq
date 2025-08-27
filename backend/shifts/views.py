@@ -195,7 +195,7 @@ class ShiftViewSet(viewsets.ModelViewSet):
             # Employee sees open shifts in their branch, plus shifts they
             # claimed/approved
             return queryset.filter(
-                Q(branch=user.branch, status='open') | Q(claimed_by=user)
+                Q(branch=user.branch, status='open') | Q(claims__user=user)
             ).order_by('-start_time')
         elif user.role == 'floating_employee':
             if user.region:
@@ -203,7 +203,7 @@ class ShiftViewSet(viewsets.ModelViewSet):
                 # plus shifts they claimed/approved
                 return queryset.filter(
                     Q(branch__region=user.region, status='open') |
-                    Q(claimed_by=user)
+                    Q(claims__user=user)
                 ).order_by('-start_time')
         elif user.is_staff or user.role == 'head_office':
             # Staff and HQ see all shifts (this check should be last)
