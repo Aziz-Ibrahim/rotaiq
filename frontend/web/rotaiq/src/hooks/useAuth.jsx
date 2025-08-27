@@ -10,7 +10,6 @@ export const AuthProvider = ({ children }) => {
 
     const fetchUserDetails = async (userId) => {
         try {
-            // Use the numeric user ID to correctly fetch details
             const response = await apiClient.get(`api/users/${userId}/`);
             setUser(response.data);
             console.log("User details fetched:", response.data);
@@ -32,10 +31,8 @@ export const AuthProvider = ({ children }) => {
             
             const decodedToken = jwtDecode(access);
             
-            // This log confirms the presence of the numeric 'id'
             console.log("Decoded Token:", decodedToken);
 
-            // Pass the numeric 'id' to fetch user details
             await fetchUserDetails(decodedToken.id);
 
             return response.data;
@@ -55,7 +52,6 @@ export const AuthProvider = ({ children }) => {
         if (token) {
             try {
                 const decodedToken = jwtDecode(token);
-                // Check if the token has the numeric 'id'
                 if (decodedToken && decodedToken.id) {
                     fetchUserDetails(decodedToken.id);
                 } else {
@@ -71,7 +67,7 @@ export const AuthProvider = ({ children }) => {
         } else {
             setLoading(false);
         }
-    }, []);
+    }, []); // Ensure this dependency array is empty to run only once
 
     return (
         <AuthContext.Provider value={{ user, loading, login, logout }}>

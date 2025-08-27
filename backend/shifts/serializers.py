@@ -223,7 +223,7 @@ class InvitationSerializer(serializers.ModelSerializer):
     """
     class Meta:
         model = Invitation
-        fields = ['email', 'branch', 'role']
+        fields = ['email', 'first_name', 'last_name', 'branch', 'role']
         read_only_fields = ['token', 'is_used', 'created_at']
 
 

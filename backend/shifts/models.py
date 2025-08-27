@@ -203,6 +203,8 @@ class Invitation(models.Model):
     """
     token = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     email = models.EmailField(unique=True)
+    first_name = models.CharField(max_length=150, null=True)
+    last_name = models.CharField(max_length=150, null=True)
     branch = models.ForeignKey(Branch, on_delete=models.CASCADE)
     role = models.CharField(
         max_length=20,
