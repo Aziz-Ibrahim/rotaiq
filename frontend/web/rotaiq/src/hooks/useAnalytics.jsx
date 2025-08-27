@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import apiClient from '../api/apiClient';
 import { useAuth } from './useAuth.jsx';
+import { notifications } from '@mantine/notifications'; 
 
 // A helper function to remove null/undefined values from the filters object
 const cleanFilters = (filters) => {
@@ -27,11 +28,18 @@ export const useAnalytics = (endpoint, filters = {}) => {
                 const cleanedFilters = cleanFilters(filters);
                 const queryString = new URLSearchParams(cleanedFilters).toString();
                 const url = `/api/analytics/${endpoint}/?${queryString}`;
+                console.log(`Fetching analytics from: ${url}`); // Add a console log for debugging
                 const response = await apiClient.get(url);
                 setData(response.data);
             } catch (err) {
                 console.error("Error fetching analytics:", err);
                 setError('Failed to load analytics data.');
+                // Show a user-friendly notification
+                notifications.show({
+                    title: 'Data Fetch Error',
+                    message: 'Could not load analytics data. Please try again later.',
+                    color: 'red',
+                });
             } finally {
                 setLoading(false);
             }

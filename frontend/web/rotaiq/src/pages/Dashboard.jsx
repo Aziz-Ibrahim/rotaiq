@@ -1,45 +1,76 @@
-// src/components/Dashboard.jsx
-import React from 'react';
-import { useAuth } from '../hooks/useAuth';
-import { Text } from '@mantine/core';
-
-// Import all dashboard components
-import EmployeeDashboard from '../components/EmployeeDashboard';
-import FloatingEmployeeDashboard from '../components/FloatingEmployeeDashboard';
-import ManagerDashboard from '../components/ManagerDashboard';
-import RegionManagerDashboard from '../components/RegionManagerDashboard';
-import HeadOfficeDashboard from '../components/HeadOfficeDashboard';
+import React from "react";
+import {
+    Container,
+    Title,
+    Text,
+    Paper,
+    Loader,
+    Center,
+    Button,
+} from "@mantine/core";
+import { useAuth } from "../hooks/useAuth.jsx";
+import HeadOfficeDashboard from "../components/HeadOfficeDashboard";
+import RegionManagerDashboard from "../components/RegionManagerDashboard";
+import ManagerDashboard from "../components/ManagerDashboard";
+import EmployeeDashboard from "../components/EmployeeDashboard";
 
 const Dashboard = () => {
-    const { user, loading } = useAuth();
+    const { user, loading, logout } = useAuth();
 
     if (loading) {
-        return <Text>Loading...</Text>;
+        return (
+            <Container>
+                <Center style={{ height: "80vh" }}>
+                    <Loader size="xl" />
+                </Center>
+            </Container>
+        );
     }
 
     if (!user) {
-        return <Text>Please log in to view the dashboard.</Text>;
+        return (
+            <Container>
+                <Title order={2}>Access Denied</Title>
+                <Text>Please log in to view this page.</Text>
+            </Container>
+        );
     }
 
-    // Conditionally render the correct dashboard based on user role
     const renderDashboard = () => {
         switch (user.role) {
-            case 'employee':
-                return <EmployeeDashboard />;
-            case 'floating_employee':
-                return <FloatingEmployeeDashboard />;
-            case 'branch_manager':
-                return <ManagerDashboard />;
-            case 'region_manager':
-                return <RegionManagerDashboard />;
-            case 'head_office':
-                return <HeadOfficeDashboard />;
+            case "head_office":
+                return <HeadOfficeDashboard user={user} />;
+            case "region_manager":
+                return <RegionManagerDashboard user={user} />;
+            case "branch_manager":
+                return <ManagerDashboard user={user} />;
+            case "employee":
+                return <EmployeeDashboard user={user} />;
             default:
-                return <Text>Your user role does not have an assigned dashboard.</Text>;
+                return <Text>User role not recognized. Please contact support.</Text>;
         }
     };
 
-    return renderDashboard();
+    return (
+        <Container size="xl" my="md">
+            <Paper p="lg" shadow="sm" mb="lg">
+                <Title order={1}>Welcome, {user.first_name}!</Title>
+                <Text mt="md">
+                {user.role}
+                </Text>
+                
+                {user.branch && user.branch.region && (
+                <Text>
+                    {user.branch.name} | {user.branch.region.name}
+                </Text>
+                )}
+                <Button onClick={logout} mt="md">
+                    Logout
+                </Button>
+            </Paper>
+            {renderDashboard()}
+        </Container>
+    );
 };
 
 export default Dashboard;
