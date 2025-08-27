@@ -70,10 +70,10 @@ const ShiftPostForm = ({ onUpdate }) => {
             <form onSubmit={form.onSubmit(handleSubmit)}>
                 <Stack>
                     <TextInput
-                        label="Your Branch ID"
-                        value={user?.branch?.id || ''}
+                        label="Your Branch"
+                        value={user?.branch?.name || ''}
                         readOnly
-                        disabled
+                        
                     />
                     <DateTimePicker
                         label="Start Time"

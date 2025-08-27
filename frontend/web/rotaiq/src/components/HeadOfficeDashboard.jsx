@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Container, Title, Text, Paper, Select, Grid } from '@mantine/core';
+import { Container, Title, Text, Paper, Select, Grid, Accordion } from '@mantine/core';
 import { useAuth } from '../hooks/useAuth';
 import { useRegionList } from '../hooks/useRegionList';
 import { useBranchList } from '../hooks/useBranchList';
@@ -21,6 +21,12 @@ const HeadOfficeDashboard = () => {
         { region_id: selectedRegionId, branch_id: selectedBranchId }
     );
     
+    // --- DEMO: SECOND ANALYTICS REPORT ---
+    const { data: shiftStatusData, loading: statusLoading, error: statusError } = useAnalytics(
+        'shifts_by_status', // Assuming you have a new endpoint for this
+        { region_id: selectedRegionId, branch_id: selectedBranchId }
+    );
+
     const regionsForSelect = regions.map(region => ({
         value: region.id.toString(),
         label: region.name,
@@ -71,13 +77,30 @@ const HeadOfficeDashboard = () => {
                     </Paper>
                 </Grid.Col>
                 <Grid.Col span={{ base: 12, md: 6 }}>
-                    {/* Pass the data, loading, and error props to ReportsDashboard */}
-                    <ReportsDashboard 
-                        title="Open Shifts by Branch" 
-                        data={openShiftsData} 
-                        loading={analyticsLoading} 
-                        error={analyticsError}
-                    />
+                    {/* The new Accordion component */}
+                    <Accordion defaultValue="open-shifts">
+                        <Accordion.Item value="open-shifts">
+                            <Accordion.Control>Open Shifts by Branch</Accordion.Control>
+                            <Accordion.Panel>
+                                <ReportsDashboard 
+                                    data={openShiftsData} 
+                                    loading={analyticsLoading} 
+                                    error={analyticsError}
+                                />
+                            </Accordion.Panel>
+                        </Accordion.Item>
+                        
+                        <Accordion.Item value="shifts-by-status">
+                            <Accordion.Control>Shifts by Status</Accordion.Control>
+                            <Accordion.Panel>
+                                <ReportsDashboard
+                                    data={shiftStatusData}
+                                    loading={statusLoading}
+                                    error={statusError}
+                                />
+                            </Accordion.Panel>
+                        </Accordion.Item>
+                    </Accordion>
                 </Grid.Col>
             </Grid>
         </Container>

@@ -1,7 +1,7 @@
 import React from 'react';
 import apiClient from '../api/apiClient';
 import { useAuth } from '../hooks/useAuth';
-import { List, ThemeIcon, Text, Button, Group } from '@mantine/core';
+import { List, ThemeIcon, Text, Button, Group, Title } from '@mantine/core';
 import { IconCircleCheck, IconCircleDashed, IconCircleFilled } from '@tabler/icons-react';
 
 const ShiftList = ({ shifts, onUpdate }) => {
@@ -42,7 +42,9 @@ const ShiftList = ({ shifts, onUpdate }) => {
                 const isEmployee = user.role === 'employee';
                 const isManager = user.role === 'manager' || user.role === 'branch_manager' || user.role === 'region_manager' || user.role === 'head_office';
                 
-                const isClaimedByMe = isEmployee && shift.claimed_by === user.id;
+                // This is the corrected line to check if the current user has a claim on the shift
+                // We use the `some` method to check if any claim in the array belongs to the user
+                const isClaimedByMe = isEmployee && shift.claims && shift.claims.some(claim => claim.user_id === user.id);
 
                 return (
                     <List.Item
