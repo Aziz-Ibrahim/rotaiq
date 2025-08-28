@@ -27,6 +27,7 @@ export const useAnalytics = (endpoint, filters = {}) => {
                 // Clean the filters object before creating the query string
                 const cleanedFilters = cleanFilters(filters);
                 const queryString = new URLSearchParams(cleanedFilters).toString();
+                // Ensure the endpoint matches the new backend URL path
                 const url = `/api/analytics/${endpoint}/?${queryString}`;
                 console.log(`Fetching analytics from: ${url}`); // Add a console log for debugging
                 const response = await apiClient.get(url);

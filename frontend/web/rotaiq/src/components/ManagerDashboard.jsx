@@ -1,17 +1,24 @@
 import React from 'react';
 import { useUserList } from '../hooks/useUserList.jsx';
 import { useShiftList } from '../hooks/useShiftList.jsx';
-import { useAnalytics } from '../hooks/useAnalytics.jsx';
 import { useAuth } from '../hooks/useAuth.jsx';
 import { useBranchList } from '../hooks/useBranchList.jsx';
 import { useRegionList } from '../hooks/useRegionList.jsx';
-import { Container, Title, Text, Paper, List, Grid, Accordion, LoadingOverlay } from '@mantine/core';
+import {
+    Container,
+    Title,
+    Text,
+    Paper,
+    List,
+    Accordion,
+    LoadingOverlay
+} from '@mantine/core';
 
-// Import the new components
 import ShiftList from './ShiftList.jsx';
 import ShiftPostForm from './ShiftPostForm.jsx';
-import ReportsDashboard from './ReportsDashboard.jsx';
-import StaffInvitationForm from './StaffInvitationForm.jsx'; // Import the new form
+import StaffInvitationForm from './StaffInvitationForm.jsx';
+// Correct: Import the new AnalyticsReport component
+import AnalyticsReport from './AnalyticsReport.jsx';
 
 const UserList = ({ users, title }) => (
     <Paper withBorder shadow="md" p="md" mt="lg">
@@ -27,58 +34,46 @@ const UserList = ({ users, title }) => (
 );
 
 const ManagerDashboard = () => {
-    // Corrected: Add useAuth hook
+    // Hooks and data fetching for the entire dashboard
     const { user, loading: authLoading, error: authError } = useAuth();
     const { userList, loading: userLoading, error: userError } = useUserList();
     const { shifts, loading: shiftsLoading, error: shiftsError, fetchShifts } = useShiftList();
-    const { branches, loading: branchesLoading, error: branchesError } = useBranchList(); // Use the new hook
+    const { branches, loading: branchesLoading, error: branchesError } = useBranchList();
     const { regions, loading: regionsLoading, error: regionsError } = useRegionList();
 
+    // Check loading and error states from all hooks
+    const isLoading = authLoading || userLoading || shiftsLoading || branchesLoading || regionsLoading;
+    const isError = authError || userError || shiftsError || branchesError || regionsError;
 
-    const { data: openShiftsData, loading: analyticsLoading, error: analyticsError } = user?.branch?.id
-        ? useAnalytics('open_shifts_by_branch', { branch_id: user.branch.id })
-        : { data: [], loading: false, error: null };
-
-    // Update loading and error checks to include all hooks
-    const isLoading = authLoading || userLoading || shiftsLoading || analyticsLoading || branchesLoading;
-    const isError = authError || userError || shiftsError || analyticsError || branchesError;
-
-    // Handle loading state
     if (isLoading) {
         return <LoadingOverlay visible={true} />;
     }
 
-    // Handle error state
     if (isError) {
         return <Text color="red">Error: Failed to load data. Please check your network connection and try again.</Text>;
     }
 
     const formattedBranches = branches.map(b => ({ value: b.id.toString(), label: b.name }));
 
-
-        let availableRoles = [];
+    let availableRoles = [];
     let availableBranches = [];
     let showBranchSelect = true;
 
     if (user.role === 'branch_manager') {
-        // A branch manager can invite another branch manager or employees to their branch
         availableRoles = [
             { value: 'branch_manager', label: 'Branch Manager' },
             { value: 'employee', label: 'Employee' },
             { value: 'floating_employee', label: 'Floating Employee' }
         ];
-        // They can only invite to their own branch
         availableBranches = user.branch ? [{ value: user.branch.id.toString(), label: user.branch.name }] : [];
-        showBranchSelect = false; // Hide the branch select since it's pre-filled
+        showBranchSelect = false;
     } else if (user.role === 'region_manager') {
-        // A region manager can invite a region manager, branch manager, or employee
         availableRoles = [
             { value: 'region_manager', label: 'Region Manager' },
             { value: 'branch_manager', label: 'Branch Manager' },
             { value: 'employee', label: 'Employee' },
             { value: 'floating_employee', label: 'Floating Employee' }
         ];
-        // They can invite to any branch within their region
         availableBranches = branches
             .filter(b => b.region.id === user.region.id)
             .map(b => ({ value: b.id.toString(), label: b.name }));
@@ -104,24 +99,20 @@ const ManagerDashboard = () => {
                     </Accordion.Panel>
                 </Accordion.Item>
 
-            <Accordion.Item value="invite-staff">
-                <Accordion.Control>Invite New Staff</Accordion.Control>
-                <Accordion.Panel>
-                    <StaffInvitationForm
-                        branches={availableBranches}
-                        roles={availableRoles}
-                        userBranchId={user.branch.id.toString()}
-                        currentUserRole={user.role}
-                    />
-                </Accordion.Panel>
-            </Accordion.Item>
-
-                <Accordion.Item value="reports">
-                    <Accordion.Control>Open Shifts Analytics</Accordion.Control>
+                <Accordion.Item value="invite-staff">
+                    <Accordion.Control>Invite New Staff</Accordion.Control>
                     <Accordion.Panel>
-                        <ReportsDashboard data={openShiftsData} loading={analyticsLoading} error={analyticsError} />
+                        <StaffInvitationForm
+                            branches={availableBranches}
+                            roles={availableRoles}
+                            userBranchId={user.branch.id.toString()}
+                            currentUserRole={user.role}
+                        />
                     </Accordion.Panel>
                 </Accordion.Item>
+
+                {/* Correct: Render the new AnalyticsReport component and pass the user prop */}
+                <AnalyticsReport user={user} />
             </Accordion>
         </Container>
     );

@@ -2,34 +2,20 @@ import React, { useState } from 'react';
 import { Container, Title, Text, Paper, Select, Grid, Accordion } from '@mantine/core';
 import { useAuth } from '../hooks/useAuth';
 import { useBranchList } from '../hooks/useBranchList';
-import { useAnalytics } from '../hooks/useAnalytics';
 import ReportsDashboard from './ReportsDashboard';
+import AnalyticsReport from './AnalyticsReport.jsx'; // Make sure you import this
 
 const RegionManagerDashboard = () => {
     const { user, loading: userLoading } = useAuth();
     const [selectedBranchId, setSelectedBranchId] = useState(null);
 
-    // Fetch all branches in the user's region
     const { branches, loading: branchesLoading } = useBranchList(user?.region?.id);
-    
-    // Fetch analytics data for open shifts, filtered by the selected branch
-    const { data: openShiftsData, loading: openShiftsLoading, error: openShiftsError } = useAnalytics(
-        'open_shifts_by_branch',
-        { branch_id: selectedBranchId }
-    );
-
-    // Fetch analytics data for shifts by status, filtered by the selected branch
-    const { data: shiftStatusData, loading: statusLoading, error: statusError } = useAnalytics(
-        'shifts_by_status',
-        { branch_id: selectedBranchId }
-    );
     
     const branchesForSelect = branches.map(branch => ({
         value: branch.id.toString(),
         label: branch.name,
     }));
 
-    // Check for loading states
     if (userLoading || branchesLoading) {
         return <Text>Loading dashboard data...</Text>;
     }
@@ -41,7 +27,6 @@ const RegionManagerDashboard = () => {
             
             <Grid mt="lg">
                 <Grid.Col span={12}>
-                    {/* The new Accordion component */}
                     <Accordion defaultValue="analytics-filters">
                         <Accordion.Item value="analytics-filters">
                             <Accordion.Control>Analytics Filters</Accordion.Control>
@@ -58,29 +43,11 @@ const RegionManagerDashboard = () => {
                                 </Paper>
                             </Accordion.Panel>
                         </Accordion.Item>
-                        
-                        <Accordion.Item value="open-shifts">
-                            <Accordion.Control>Open Shifts by Branch</Accordion.Control>
-                            <Accordion.Panel>
-                                <ReportsDashboard 
-                                    data={openShiftsData} 
-                                    loading={openShiftsLoading} 
-                                    error={openShiftsError} 
-                                />
-                            </Accordion.Panel>
-                        </Accordion.Item>
-                        
-                        <Accordion.Item value="shifts-by-status">
-                            <Accordion.Control>Shifts by Status</Accordion.Control>
-                            <Accordion.Panel>
-                                <ReportsDashboard
-                                    data={shiftStatusData}
-                                    loading={statusLoading}
-                                    error={statusError}
-                                />
-                            </Accordion.Panel>
-                        </Accordion.Item>
                     </Accordion>
+                </Grid.Col>
+                <Grid.Col span={12}>
+                    {/* Replaced the old Accordion.Item with the new component */}
+                    <AnalyticsReport user={user} selectedBranchId={selectedBranchId} />
                 </Grid.Col>
             </Grid>
         </Container>

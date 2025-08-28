@@ -17,6 +17,7 @@
     "@mantine/notifications": "^8.2.7",
     "@tabler/icons-react": "^3.34.1",
     "axios": "^1.11.0",
+    "date-fns": "^4.1.0",
     "dayjs": "^1.11.13",
     "formik": "^2.4.6",
     "jwt-decode": "^4.0.0",

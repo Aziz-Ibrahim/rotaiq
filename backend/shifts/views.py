@@ -7,6 +7,7 @@ from django.shortcuts import get_object_or_404
 from django.db import transaction
 from django.db.models import Q, Count
 from django.db.models.expressions import F
+from django.db.models.functions import ExtractDay, ExtractMonth, ExtractYear
 from django.contrib.auth import get_user_model
 
 from .models import *
@@ -449,4 +450,47 @@ class AnalyticsViewSet(viewsets.ViewSet):
             ).annotate(value=Count('branch')).order_by('branch__name')
         
         return Response(data)
+
+    @action(detail=False, methods=['get'], url_path='open-shifts-timeline')
+    def open_shifts_timeline(self, request):
+        queryset = self.get_base_queryset().filter(status='open')
+
+        region_id = request.query_params.get('region_id')
+        branch_id = request.query_params.get('branch_id')
+        year = request.query_params.get('year')
+        month = request.query_params.get('month')
+
+        # Apply filtering for branch and region
+        if branch_id:
+            queryset = queryset.filter(branch__id=branch_id)
+        elif region_id:
+            queryset = queryset.filter(branch__region__id=region_id)
+
+        # Apply year and month filtering
+        year = request.query_params.get('year')
+        month = request.query_params.get('month')
+
+        if year:
+            queryset = queryset.filter(start_time__year=year)
+        if month:
+            queryset = queryset.filter(start_time__month=month)
+
+        data = queryset.annotate(
+            day=ExtractDay('start_time')
+        ).values('day', 'status').annotate(
+            count=Count('pk')
+        ).order_by('day', 'status')
+
+        transformed_data = {}
+        for item in data:
+            day = item['day']
+            status = item['status']
+            count = item['count']
+
+            if day not in transformed_data:
+                transformed_data[day] = {'day': day}
+            
+            transformed_data[day][status] = count
+        
+        return Response(list(transformed_data.values()))
 
