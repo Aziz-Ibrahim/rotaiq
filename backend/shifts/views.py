@@ -151,19 +151,50 @@ class InvitationViewSet(
             return self.queryset.filter(branch=self.request.user.branch)
         return self.queryset.none()  # Employees cannot see invitations
 
-    def perform_create(self, serializer):
+    def create(self, request, *args, **kwargs):
         """
-        Creates a new invitation linked to the manager's branch.
+        Creates a new invitation based on the manager's role and returns the
+        serialized data, including the newly created token.
         """
-        if self.request.user.role == 'manager':
-            # Managers can only create invitations for their own branch
-            branch = self.request.user.branch
-            serializer.save(branch=branch)
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        user = self.request.user
+
+        # Branch Managers can only create invitations for their own branch
+        if user.role == 'branch_manager':
+            invitation_branch = serializer.validated_data.get('branch')
+            if invitation_branch and invitation_branch != user.branch:
+                raise PermissionDenied(
+                    "You can only create invitations for your own branch."
+                )
+            
+            serializer.save(branch=user.branch)
+
+        # Region Managers can create invitations for any branch in their region
+        elif user.role == 'region_manager':
+            invitation_branch = serializer.validated_data.get('branch')
+            if not invitation_branch:
+                raise PermissionDenied(
+                    "A branch must be specified for this role."
+                )
+            if invitation_branch.region != user.region:
+                raise PermissionDenied(
+                    "You can only create invitations for branches in your "
+                    "region."
+                )
+
+            serializer.save(branch=invitation_branch)
+
         else:
-            # Raise a PermissionDenied exception instead of a Response
             raise PermissionDenied(
                 "You do not have permission to perform this action."
             )
+            
+        headers = self.get_success_headers(serializer.data)
+        return Response(
+            serializer.data, status=status.HTTP_201_CREATED, headers=headers
+        )
 
 
 class ShiftViewSet(viewsets.ModelViewSet):

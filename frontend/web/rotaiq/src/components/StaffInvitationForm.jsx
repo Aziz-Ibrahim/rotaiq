@@ -1,155 +1,156 @@
+// src/components/StaffInvitationForm.jsx
 import React, { useState } from 'react';
+import { useFormik } from 'formik';
+import * as Yup from 'yup';
 import QRCode from 'react-qr-code';
-import { Button, TextInput, Select, Text, Group, Box, Title, Paper, LoadingOverlay, Alert } from '@mantine/core';
-
-// This imports your authenticated client, which is correct since
-// the invitation endpoint requires manager authentication.
+import { Paper, Title, Button, Group, Text, Select, TextInput, Box } from '@mantine/core';
 import apiClient from '../api/apiClient';
 
-const StaffInvitationForm = ({ branches, roles }) => {
-  const [formData, setFormData] = useState({ 
-    email: '', 
-    first_name: '', 
-    last_name: '', 
-    branch: '', 
-    role: 'employee' 
+const validationSchema = Yup.object({
+  first_name: Yup.string().required('First name is required'),
+  last_name: Yup.string().required('Last name is required'),
+  email: Yup.string().email('Invalid email address').required('Email is required'),
+  branch: Yup.string().required('Branch is required'),
+  role: Yup.string().required('Role is required'),
+});
+
+const defaultRoles = [
+  { value: 'employee', label: 'Employee' },
+];
+
+export default function StaffInvitationForm({ branches = [], roles = defaultRoles, userBranchId, currentUserRole }) {
+  const [inviteData, setInviteData] = useState(null);
+
+  const formik = useFormik({
+    initialValues: {
+      first_name: '',
+      last_name: '',
+      email: '',
+      branch: currentUserRole === 'branch_manager' ? userBranchId : '',
+      role: '',
+    },
+    validationSchema: validationSchema,
+    onSubmit: async (values, { setSubmitting, resetForm, setStatus }) => {
+      setStatus(null);
+      setInviteData(null);
+
+      try {
+        const response = await apiClient.post('/api/invitations/', values);
+        
+
+        const token = response.data?.token;
+
+        if (!token) {
+          console.error('API response did not contain a token:', response.data);
+          setStatus({
+            message: 'Invitation created, but token was not returned. Please check the server logs.',
+            color: 'red'
+          });
+          return;
+        }
+
+        const invitationLink = `${window.location.origin}/register?token=${token}`;
+        
+        // Store the invitation link and token in state
+        setInviteData({ token, link: invitationLink });
+        
+        // Use a different success message for clarity
+        setStatus({ message: 'Invitation generated successfully.', color: 'green' });
+        
+        // Reset the form values after successful submission
+        resetForm();
+      } catch (err) {
+        console.error('Invitation failed:', err.response?.data);
+        setStatus({ 
+          message: err.response?.data?.email?.[0] || 
+                   err.response?.data?.detail ||
+                   err.response?.data?.branch?.[0] ||
+                   'Invitation failed. Please try again.', 
+          color: 'red' 
+        });
+      } finally {
+        setSubmitting(false);
+      }
+    },
   });
-  const [inviteToken, setInviteToken] = useState(null);
-  const [registrationLink, setRegistrationLink] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
-  };
-  
-  const handleSelectChange = (field) => (value) => {
-    setFormData({ ...formData, [field]: value });
-  };
-
-  const generateInvitation = async (event) => {
-    event.preventDefault();
-    setLoading(true);
-    setError(null);
-    setInviteToken(null);
-    setRegistrationLink(null);
-
-    // Ensure branch is a valid ID from the options
-    const selectedBranch = branches.find(b => b.value === formData.branch);
-    if (!selectedBranch) {
-      setError('Please select a valid branch.');
-      setLoading(false);
-      return;
-    }
-
-    try {
-      // The backend expects branch_id, not branch object
-      const payload = {
-          ...formData,
-          branch_id: formData.branch
-      };
-      
-      // Send the invitation data to the backend
-      const response = await apiClient.post('api/invitations/', payload);
-      const token = response.data.token;
-      
-      // Construct the full registration link using the token
-      const link = `${window.location.origin}/register?token=${token}`;
-      
-      setInviteToken(token);
-      setRegistrationLink(link);
-      
-    } catch (err) {
-      console.error('Failed to generate invitation:', err.response?.data);
-      setError(err.response?.data?.email?.[0] || err.response?.data?.detail || 'Failed to generate invitation. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
-    <Box className="relative w-full">
-      <Paper shadow="xl" p="xl" radius="md" className="w-full max-w-lg mx-auto">
-        <LoadingOverlay visible={loading} />
-        <Title order={2} className="text-center mb-6 text-gray-800">
-          Invite New Staff
-        </Title>
-        <form onSubmit={generateInvitation}>
+    <Paper shadow="xl" p="xl" radius="md" className="w-full max-w-lg mx-auto">
+      <Title order={2} className="text-center mb-6 text-gray-800">
+        Invite New Staff
+      </Title>
+      <form onSubmit={formik.handleSubmit}>
+        <div className="space-y-4">
           <TextInput
             label="First Name"
-            name="first_name"
-            value={formData.first_name}
-            onChange={handleInputChange}
-            placeholder="Enter first name"
-            required
-            className="mb-4"
+            placeholder="John"
+            {...formik.getFieldProps('first_name')}
+            error={formik.touched.first_name && formik.errors.first_name}
           />
           <TextInput
             label="Last Name"
-            name="last_name"
-            value={formData.last_name}
-            onChange={handleInputChange}
-            placeholder="Enter last name"
-            required
-            className="mb-4"
+            placeholder="Doe"
+            {...formik.getFieldProps('last_name')}
+            error={formik.touched.last_name && formik.errors.last_name}
           />
           <TextInput
             label="Email"
-            name="email"
+            placeholder="john.doe@example.com"
             type="email"
-            value={formData.email}
-            onChange={handleInputChange}
-            placeholder="Enter email address"
-            required
-            className="mb-4"
+            {...formik.getFieldProps('email')}
+            error={formik.touched.email && formik.errors.email}
           />
+          
+          {/* Only show the branch select for region managers */}
+          {currentUserRole === 'region_manager' && (
+            <Select
+              label="Assign Branch"
+              placeholder="Pick a branch"
+              data={branches}
+              {...formik.getFieldProps('branch')}
+              error={formik.touched.branch && formik.errors.branch}
+              onChange={(value) => formik.setFieldValue('branch', value)}
+            />
+          )}
+
           <Select
-            label="Branch"
-            placeholder="Select branch"
-            data={branches}
-            value={formData.branch}
-            onChange={handleSelectChange('branch')}
-            required
-            className="mb-4"
-          />
-          <Select
-            label="Role"
-            placeholder="Select role"
+            label="Assign Role"
+            placeholder="Pick a role"
             data={roles}
-            value={formData.role}
-            onChange={handleSelectChange('role')}
-            required
-            className="mb-6"
+            {...formik.getFieldProps('role')}
+            error={formik.touched.role && formik.errors.role}
+            onChange={(value) => formik.setFieldValue('role', value)}
           />
-          <Button type="submit" fullWidth>
+        </div>
+
+        {formik.status && (
+          <Box className={`mt-4 p-3 rounded-lg text-sm ${formik.status.color === 'red' ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`}>
+            <Text>{formik.status.message}</Text>
+          </Box>
+        )}
+
+        <Group position="right" mt="xl">
+          <Button type="submit" loading={formik.isSubmitting}>
             Generate Invitation
           </Button>
-        </form>
+        </Group>
+      </form>
 
-        {error && (
-          <Alert title="Error" color="red" className="mt-4">
-            {error}
-          </Alert>
-        )}
-
-        {inviteToken && (
-          <div className="mt-8 flex flex-col items-center p-6 bg-gray-50 rounded-lg">
-            <Title order={4} className="mb-4 text-gray-700">Share this with the new staff member:</Title>
-            <div className="p-4 bg-white rounded-md shadow-inner">
-              <QRCode value={registrationLink} size={150} />
-            </div>
-            <Text className="mt-4 text-center text-gray-600 font-medium break-all">
-              Or share this link:
-            </Text>
-            <a href={registrationLink} className="mt-2 text-blue-600 hover:underline text-sm break-all">
-              {registrationLink}
-            </a>
+      {/* Conditionally render the QR code and link */}
+      {inviteData && (
+        <div className="mt-8 flex flex-col items-center p-6 bg-gray-50 rounded-lg">
+          <Title order={4} className="mb-4 text-gray-700">Share this with the new staff member:</Title>
+          <div className="p-4 bg-white rounded-md shadow-inner">
+            <QRCode value={inviteData.link} size={150} />
           </div>
-        )}
-      </Paper>
-    </Box>
+          <Text className="mt-4 text-center text-gray-600 font-medium break-all">
+            Or share this link:
+          </Text>
+          <a href={inviteData.link} className="mt-2 text-blue-600 hover:underline text-sm break-all">
+            {inviteData.link}
+          </a>
+        </div>
+      )}
+    </Paper>
   );
-};
-
-export default StaffInvitationForm;
+}
