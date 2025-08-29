@@ -1,85 +1,87 @@
-import React from 'react';
-import apiClient from '../api/apiClient';
-import { useAuth } from '../hooks/useAuth';
-import { List, ThemeIcon, Text, Button, Group, Title } from '@mantine/core';
-import { IconCircleCheck, IconCircleDashed, IconCircleFilled } from '@tabler/icons-react';
+import React, { useEffect, useState } from 'react';
+import { useShiftList } from '../hooks/useShiftList.jsx';
+import { useAuth } from '../hooks/useAuth.jsx';
+import { Title, Text, Button, Accordion, Badge, Stack } from '@mantine/core';
+import ShiftCard from './ShiftCard.jsx';
+import apiClient from '../api/apiClient.js';
 
-const ShiftList = ({ shifts, onUpdate }) => {
-    const { user, loading } = useAuth();
+const ShiftList = ({ viewType, onUpdate }) => {
+    const { user } = useAuth();
+    const { shifts, loading, error, fetchShifts } = useShiftList();
+    const [claiming, setClaiming] = useState(false);
 
-    const handleAction = async (shiftId, endpoint) => {
-        try {
-            await apiClient.post(`api/shifts/${shiftId}/${endpoint}/`);
-            onUpdate();
-        } catch (error) {
-            console.error(`Error with ${endpoint} action:`, error);
-        }
-    };
+    useEffect(() => {
+        fetchShifts();
+        const intervalId = setInterval(fetchShifts, 30000000);
+        return () => clearInterval(intervalId);
+    }, [fetchShifts]);
 
     if (loading) {
         return <Text>Loading shifts...</Text>;
     }
 
-    if (!user) {
-        return <Text color="red">You are not authorized to view this page.</Text>;
+    if (error) {
+        return <Text color="red">Error: Failed to load shifts.</Text>;
     }
 
-    if (!shifts || shifts.length === 0) {
-        return <Text>No shifts to display.</Text>;
-    }
+    const handleClaim = async (shiftId) => {
+        if (claiming) return;
+        setClaiming(true);
+        try {
+            await apiClient.post(`/api/shifts/${shiftId}/claim/`);
+            alert("Shift claimed successfully. It's now pending manager approval.");
+            await fetchShifts();
+            if (onUpdate) onUpdate();
+        } catch (error) {
+            console.error('Error claiming shift:', error.response?.data || error.message);
+            alert(error.response?.data?.error || 'Failed to claim shift.');
+        } finally {
+            setClaiming(false);
+        }
+    };
+    
+    const filteredShifts = shifts.filter(shift => {
+        if (!user || !user.role) return false;
+
+        switch (viewType) {
+            case 'open_shifts':
+                if (user.role === 'employee' || user.role === 'floating_employee') {
+                    return shift.status === 'open';
+                }
+                return false;
+            case 'pending_claims':
+                return shift.claims.some(claim => claim.status === 'pending');
+            case 'my_posted_shifts':
+                return shift.posted_by === user.id;
+            case 'my_claims':
+                return shift.claims.some(claim => claim.user?.id === user.id);
+            case 'all_shifts':
+                return true;
+            default:
+                return false;
+        }
+    });
+
+    const shiftItems = filteredShifts.map((shift) => (
+        <ShiftCard 
+            key={shift.id} 
+            shift={shift} 
+            user={user} 
+            onUpdate={fetchShifts} 
+            onClaim={handleClaim} 
+        />
+    ));
 
     return (
-        <List
-            spacing="md"
-            size="sm"
-            center
-        >
-            {shifts.map(shift => {
-                if (!shift) {
-                    return null;
-                }
-
-                const isEmployee = user.role === 'employee';
-                const isManager = user.role === 'manager' || user.role === 'branch_manager' || user.role === 'region_manager' || user.role === 'head_office';
-                
-                // This is the corrected line to check if the current user has a claim on the shift
-                // We use the `some` method to check if any claim in the array belongs to the user
-                const isClaimedByMe = isEmployee && shift.claims && shift.claims.some(claim => claim.user_id === user.id);
-
-                return (
-                    <List.Item
-                        key={shift.id}
-                        icon={
-                            <ThemeIcon color={shift.status === 'open' ? 'blue' : shift.status === 'claimed' ? 'orange' : 'green'} size={24} radius="xl">
-                                {shift.status === 'open' ? <IconCircleDashed size="1rem" /> : shift.status === 'claimed' ? <IconCircleFilled size="1rem" /> : <IconCircleCheck size="1rem" />}
-                            </ThemeIcon>
-                        }
-                    >
-                        <Text component="p"><strong>Role:</strong> {shift.role}</Text>
-                        <Text component="p"><strong>Time:</strong> {new Date(shift.start_time).toLocaleString()} - {new Date(shift.end_time).toLocaleString()}</Text>
-                        <Text component="p"><strong>Status:</strong> {shift.status}</Text>
-                        <Text component="p"><strong>Description:</strong> {shift.description}</Text>
-                        
-                        {shift.claimed_by_details && (
-                            <Text component="p"><strong>Claimed by:</strong> {shift.claimed_by_details.first_name} {shift.claimed_by_details.last_name}</Text>
-                        )}
-                        
-                        <Group mt="md">
-                            {isEmployee && shift.status === 'open' && !isClaimedByMe && (
-                                <Button onClick={() => handleAction(shift.id, 'claim')}>Claim Shift</Button>
-                            )}
-                            
-                            {isManager && shift.status === 'claimed' && (
-                                <>
-                                    <Button onClick={() => handleAction(shift.id, 'approve')} color="green">Approve</Button>
-                                    <Button onClick={() => handleAction(shift.id, 'decline')} color="red">Decline</Button>
-                                </>
-                            )}
-                        </Group>
-                    </List.Item>
-                );
-            })}
-        </List>
+        <Stack mt="md">
+            {shiftItems.length > 0 ? (
+                <Accordion defaultValue={shiftItems[0].key}>
+                    {shiftItems}
+                </Accordion>
+            ) : (
+                <Text color="dimmed">No shifts to display for this view.</Text>
+            )}
+        </Stack>
     );
 };
 

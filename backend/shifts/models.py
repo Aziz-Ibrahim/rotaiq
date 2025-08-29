@@ -306,4 +306,4 @@ class ShiftClaim(models.Model):
         unique_together = ('shift', 'user')
 
     def __str__(self):
-        return f"{self.user.get_full_name()} - {self.shift} ({self.status})"
+        return f"{self.user.first_name} {self.user.last_name} - {self.shift} ({self.status})"

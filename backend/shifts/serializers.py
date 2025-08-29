@@ -270,9 +270,7 @@ class ShiftSerializer(serializers.ModelSerializer):
     branch_details = BranchSerializer(source='branch', read_only=True)
     posted_by_details = UserSerializer(source='posted_by', read_only=True)
     assigned_to_details = UserSerializer(source='assigned_to', read_only=True)
-    
     claims = ShiftClaimSerializer(many=True, read_only=True)
-    claimed_by_details = serializers.SerializerMethodField()
 
     class Meta:
         """
@@ -282,22 +280,9 @@ class ShiftSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'branch', 'branch_details', 'posted_by', 'posted_by_details',
             'start_time', 'end_time', 'role', 'status', 'description',
-            'assigned_to', 'assigned_to_details', 'claims',
-            'claimed_by_details'
+            'assigned_to', 'assigned_to_details', 'claims'
         ]
         read_only_fields = ['status', 'posted_by', 'assigned_to', 'claims']
-
-    def get_claimed_by_details(self, obj):
-        """
-        Returns the details of the user who has claimed the shift.
-        """
-        # Find the first claim for the shift
-        first_claim = obj.claims.first()
-        if first_claim:
-            # Check if the user object exists on the claim
-            if hasattr(first_claim, 'user'):
-                return UserSerializer(first_claim.user).data
-        return None
 
 
 class AnalyticsSerializer(serializers.Serializer):

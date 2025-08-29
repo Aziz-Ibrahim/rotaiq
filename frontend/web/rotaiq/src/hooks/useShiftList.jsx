@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import apiClient from '../api/apiClient';
 import { useAuth } from './useAuth.jsx';
 
@@ -13,7 +13,10 @@ export const useShiftList = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    const fetchShifts = async () => {
+    // Use useCallback to memoize the fetchShifts function.
+    // This prevents the function from being re-created on every render,
+    // which was causing the infinite loop.
+    const fetchShifts = useCallback(async () => {
         if (!user || authLoading) return;
 
         setLoading(true);
@@ -29,11 +32,13 @@ export const useShiftList = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [user, authLoading]); // The dependencies for useCallback are the same as useEffect
 
     useEffect(() => {
+        // We now call fetchShifts inside this useEffect, which will run when
+        // the dependencies (user, authLoading) change.
         fetchShifts();
-    }, [user, authLoading]);
+    }, [fetchShifts]); // Pass the memoized function here
 
     return { shifts, loading, error, fetchShifts };
 };

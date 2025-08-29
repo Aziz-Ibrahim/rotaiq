@@ -1,6 +1,5 @@
 import React from 'react';
 import { useUserList } from '../hooks/useUserList.jsx';
-import { useShiftList } from '../hooks/useShiftList.jsx';
 import { useAuth } from '../hooks/useAuth.jsx';
 import { useBranchList } from '../hooks/useBranchList.jsx';
 import { useRegionList } from '../hooks/useRegionList.jsx';
@@ -11,17 +10,20 @@ import {
     Paper,
     List,
     Accordion,
-    LoadingOverlay
+    LoadingOverlay,
+    Grid,
+    Group,
+    Stack
 } from '@mantine/core';
 
 import ShiftList from './ShiftList.jsx';
 import ShiftPostForm from './ShiftPostForm.jsx';
 import StaffInvitationForm from './StaffInvitationForm.jsx';
-// Correct: Import the new AnalyticsReport component
 import AnalyticsReport from './AnalyticsReport.jsx';
+import { useShiftList } from '../hooks/useShiftList.jsx';
 
 const UserList = ({ users, title }) => (
-    <Paper withBorder shadow="md" p="md" mt="lg">
+    <Paper withBorder shadow="md" p="md" mt="lg" radius="md">
         <Title order={3}>{title}</Title>
         <List mt="sm">
             {users.map((u) => (
@@ -34,16 +36,14 @@ const UserList = ({ users, title }) => (
 );
 
 const ManagerDashboard = () => {
-    // Hooks and data fetching for the entire dashboard
     const { user, loading: authLoading, error: authError } = useAuth();
     const { userList, loading: userLoading, error: userError } = useUserList();
-    const { shifts, loading: shiftsLoading, error: shiftsError, fetchShifts } = useShiftList();
     const { branches, loading: branchesLoading, error: branchesError } = useBranchList();
     const { regions, loading: regionsLoading, error: regionsError } = useRegionList();
+    const { fetchShifts } = useShiftList();
 
-    // Check loading and error states from all hooks
-    const isLoading = authLoading || userLoading || shiftsLoading || branchesLoading || regionsLoading;
-    const isError = authError || userError || shiftsError || branchesError || regionsError;
+    const isLoading = authLoading || userLoading || branchesLoading || regionsLoading;
+    const isError = authError || userError || branchesError || regionsError;
 
     if (isLoading) {
         return <LoadingOverlay visible={true} />;
@@ -54,7 +54,6 @@ const ManagerDashboard = () => {
     }
 
     const formattedBranches = branches.map(b => ({ value: b.id.toString(), label: b.name }));
-
     let availableRoles = [];
     let availableBranches = [];
     let showBranchSelect = true;
@@ -82,23 +81,21 @@ const ManagerDashboard = () => {
     return (
         <Container>
             <Title order={2}>Manager Dashboard</Title>
-            <Text>Manage your branch's team, schedule, and operations here. You can assign shifts and invite new employees.</Text>
-
-            <Accordion defaultValue="shift-list" mt="lg">
-                <Accordion.Item value="post-shift">
-                    <Accordion.Control>Post a New Shift</Accordion.Control>
+            <Text>Welcome back, {user.first_name}! Here is your shift overview.</Text>
+            
+            <Accordion defaultValue="create-shift" mt="lg">
+                <Accordion.Item value="create-shift">
+                    <Accordion.Control>Create New Shift</Accordion.Control>
                     <Accordion.Panel>
-                        <ShiftPostForm onUpdate={fetchShifts} />
+                        <ShiftPostForm onShiftPosted={fetchShifts} />
                     </Accordion.Panel>
                 </Accordion.Item>
-
-                <Accordion.Item value="shift-list">
+                <Accordion.Item value="all-shifts">
                     <Accordion.Control>All Shifts</Accordion.Control>
                     <Accordion.Panel>
-                        <ShiftList shifts={shifts} onUpdate={fetchShifts} />
+                        <ShiftList viewType="all_shifts" onUpdate={fetchShifts}/>
                     </Accordion.Panel>
                 </Accordion.Item>
-
                 <Accordion.Item value="invite-staff">
                     <Accordion.Control>Invite New Staff</Accordion.Control>
                     <Accordion.Panel>
@@ -110,9 +107,7 @@ const ManagerDashboard = () => {
                         />
                     </Accordion.Panel>
                 </Accordion.Item>
-
-                {/* Correct: Render the new AnalyticsReport component and pass the user prop */}
-                <AnalyticsReport user={user} />
+            <AnalyticsReport user={user} />
             </Accordion>
         </Container>
     );
