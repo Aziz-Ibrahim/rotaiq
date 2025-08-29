@@ -26,7 +26,7 @@ router.register(r'analytics', views.AnalyticsViewSet, basename='analytics')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-
+    path('', include(router.urls)),
     path(
         'api/register/',
         views.UserRegistrationView.as_view(),

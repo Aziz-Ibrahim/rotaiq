@@ -350,10 +350,10 @@ class AnalyticsViewSet(viewsets.ViewSet):
         
         return Shift.objects.none()
 
-    # This is a key action that counts open shifts by branch
+    # This is a key action that counts all shifts by branch
     @action(detail=False, methods=['get'])
-    def open_shifts_by_branch(self, request):
-        queryset = self.get_base_queryset().filter(status='open')
+    def all_shifts_by_branch(self, request):
+        queryset = self.get_base_queryset()
 
         # Apply additional filtering for Head Office and Region Managers
         region_id = request.query_params.get('region_id')
@@ -371,9 +371,10 @@ class AnalyticsViewSet(viewsets.ViewSet):
         
         return Response(data)
 
-    @action(detail=False, methods=['get'], url_path='open-shifts-timeline')
-    def open_shifts_timeline(self, request):
-        queryset = self.get_base_queryset().filter(status='open')
+    @action(detail=False, methods=['get'], url_path='all-shifts-timeline')
+    def all_shifts_timeline(self, request):
+        # The fix: we now get all shifts, not just 'open' ones.
+        queryset = self.get_base_queryset()
 
         region_id = request.query_params.get('region_id')
         branch_id = request.query_params.get('branch_id')

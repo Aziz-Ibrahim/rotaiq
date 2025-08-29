@@ -32,14 +32,14 @@ const AnalyticsReport = ({ user }) => {
     const timelineFilters = getTimelineFilters();
 
     const {
-        data: openShiftsData,
+        data: allShiftsData,
         loading: analyticsLoading,
         error: analyticsError
-    } = useAnalytics('open-shifts-timeline', timelineFilters);
+    } = useAnalytics('all-shifts-timeline', timelineFilters); // Changed endpoint to all-shifts-timeline
 
     return (
         <Accordion.Item value="reports">
-            <Accordion.Control>Open Shifts Analytics</Accordion.Control>
+            <Accordion.Control>Shifts Analytics</Accordion.Control>
             <Accordion.Panel>
                 <Group position="apart" my="md">
                     <Button variant="light" onClick={handlePreviousMonth} leftIcon={<IconChevronLeft size={16} />} type="button">
@@ -51,7 +51,7 @@ const AnalyticsReport = ({ user }) => {
                     </Button>
                 </Group>
                 <ReportsDashboard
-                    data={openShiftsData}
+                    data={allShiftsData}
                     loading={analyticsLoading}
                     error={analyticsError}
                     currentDate={currentDate}
