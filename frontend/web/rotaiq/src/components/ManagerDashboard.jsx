@@ -1,47 +1,28 @@
 import React from 'react';
-import { useUserList } from '../hooks/useUserList.jsx';
-import { useAuth } from '../hooks/useAuth.jsx';
-import { useBranchList } from '../hooks/useBranchList.jsx';
-import { useRegionList } from '../hooks/useRegionList.jsx';
 import {
     Container,
     Title,
     Text,
-    Paper,
-    List,
-    Accordion,
     LoadingOverlay,
-    Grid,
-    Group,
-    Stack
 } from '@mantine/core';
 
 import ShiftList from './ShiftList.jsx';
 import ShiftPostForm from './ShiftPostForm.jsx';
 import StaffInvitationForm from './StaffInvitationForm.jsx';
 import AnalyticsReport from './AnalyticsReport.jsx';
+import { useAuth } from '../hooks/useAuth.jsx';
+import { useUserList } from '../hooks/useUserList.jsx';
+import { useBranchList } from '../hooks/useBranchList.jsx';
+import { useRegionList } from '../hooks/useRegionList.jsx';
 import { useShiftList } from '../hooks/useShiftList.jsx';
 
-const UserList = ({ users, title }) => (
-    <Paper withBorder shadow="md" p="md" mt="lg" radius="md">
-        <Title order={3}>{title}</Title>
-        <List mt="sm">
-            {users.map((u) => (
-                <List.Item key={u.id}>
-                    {u.first_name} {u.last_name} ({u.role})
-                </List.Item>
-            ))}
-        </List>
-    </Paper>
-);
-
-const ManagerDashboard = () => {
+const ManagerDashboard = ({ currentView }) => {
     const { user, loading: authLoading, error: authError } = useAuth();
     const { userList, loading: userLoading, error: userError } = useUserList();
     const { branches, loading: branchesLoading, error: branchesError } = useBranchList();
     const { regions, loading: regionsLoading, error: regionsError } = useRegionList();
     const { fetchShifts } = useShiftList();
-
+    
     const isLoading = authLoading || userLoading || branchesLoading || regionsLoading;
     const isError = authError || userError || branchesError || regionsError;
 
@@ -78,37 +59,53 @@ const ManagerDashboard = () => {
             .map(b => ({ value: b.id.toString(), label: b.name }));
     }
 
-    return (
-        <Container>
-            <Title order={2}>Manager Dashboard</Title>
-            <Text>Welcome back, {user.first_name}! Here is your shift overview.</Text>
-            
-            <Accordion defaultValue="create-shift" mt="lg">
-                <Accordion.Item value="create-shift">
-                    <Accordion.Control>Create New Shift</Accordion.Control>
-                    <Accordion.Panel>
+    const renderContent = () => {
+        switch (currentView) {
+            case 'dashboard':
+                return (
+                    <>
+                        <Title order={2}>Manager Dashboard</Title>
+                        <Text>Welcome back, {user.first_name}! Here is your shift overview.</Text>
+                        <ShiftList viewType="all_shifts" onUpdate={fetchShifts} />
+                    </>
+                );
+            case 'create-shift':
+                return (
+                    <>
+                        <Title order={2}>Create New Shift</Title>
+                        <Text>Fill out the form to create a new shift.</Text>
                         <ShiftPostForm onShiftPosted={fetchShifts} />
-                    </Accordion.Panel>
-                </Accordion.Item>
-                <Accordion.Item value="all-shifts">
-                    <Accordion.Control>All Shifts</Accordion.Control>
-                    <Accordion.Panel>
-                        <ShiftList viewType="all_shifts" onUpdate={fetchShifts}/>
-                    </Accordion.Panel>
-                </Accordion.Item>
-                <Accordion.Item value="invite-staff">
-                    <Accordion.Control>Invite New Staff</Accordion.Control>
-                    <Accordion.Panel>
+                    </>
+                );
+            case 'analytics':
+                return (
+                    <>
+                        <Title order={2}>Analytics</Title>
+                        <Text>View all analytics charts and reports here.</Text>
+                        <AnalyticsReport user={user} />
+                    </>
+                );
+            case 'invitations':
+                return (
+                    <>
+                        <Title order={2}>Invite New Staff</Title>
+                        <Text>Send an invitation to a new staff member.</Text>
                         <StaffInvitationForm
                             branches={availableBranches}
                             roles={availableRoles}
                             userBranchId={user.branch.id.toString()}
                             currentUserRole={user.role}
                         />
-                    </Accordion.Panel>
-                </Accordion.Item>
-            <AnalyticsReport user={user} />
-            </Accordion>
+                    </>
+                );
+            default:
+                return <Text>Select an option from the sidebar.</Text>;
+        }
+    };
+
+    return (
+        <Container>
+            {renderContent()}
         </Container>
     );
 };

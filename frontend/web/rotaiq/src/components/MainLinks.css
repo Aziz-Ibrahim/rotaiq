@@ -1,0 +1,36 @@
+.main-link {
+  width: 100%;
+  padding: 5px;
+  border-radius: 25px;
+  transition: background-color 0.2s, box-shadow 0.2s, color 0.2s;
+  background-color: transparent;
+  box-shadow: none;
+}
+
+.main-link:hover {
+  background-color: #3c5422;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.main-link[data-active] {
+  background-color: #3c5422;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+}
+
+.main-link-text {
+  color: #3c5422;
+  font-weight: 400;
+}
+
+.main-link[data-active] .main-link-text {
+  color: #fff;
+  font-weight: 600;
+}
+
+.main-link-icon {
+  color: #3c5422;
+}
+
+.main-link[data-active] .main-link-icon {
+  color: rgba(144, 204, 86, 0.6); /* lime-green[6] */
+}

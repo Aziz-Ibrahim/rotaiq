@@ -18,7 +18,8 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <BrowserRouter>
       <MantineProvider theme={theme}>
-        <Notifications />
+        <Notifications position="top-right" />
+        <App />
         <Routes>
           <Route path="/" element={<App />}>
             <Route index element={<Login />} />

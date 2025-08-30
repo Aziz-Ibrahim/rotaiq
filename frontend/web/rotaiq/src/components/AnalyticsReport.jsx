@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { useAnalytics } from '../hooks/useAnalytics.jsx';
-import { Accordion, Group, Button, Text } from '@mantine/core';
+import { Group, Button, Text, Paper, Stack } from '@mantine/core';
 import { format, getMonth, getYear, setMonth } from 'date-fns';
 import { IconChevronLeft, IconChevronRight } from '@tabler/icons-react';
 import ReportsDashboard from './ReportsDashboard.jsx';
 
-const AnalyticsReport = ({ user }) => {
+const AnalyticsReport = ({ user, selectedRegionId, selectedBranchId }) => {
     const [currentDate, setCurrentDate] = useState(new Date());
 
     const handlePreviousMonth = () => {
@@ -17,16 +17,28 @@ const AnalyticsReport = ({ user }) => {
     };
 
     const getTimelineFilters = () => {
-        if (!user) {
-            return {};
+        const filters = {
+            year: getYear(currentDate),
+            month: getMonth(currentDate) + 1,
+        };
+
+        if (user) {
+            if (user.role === 'branch_manager' && user.branch) {
+                filters.branch_id = user.branch.id;
+            } else if (user.role === 'region_manager' && user.region) {
+                filters.region_id = user.region.id;
+            }
         }
-        if (user.role === 'branch_manager') {
-            return { branch_id: user.branch.id, year: getYear(currentDate), month: getMonth(currentDate) + 1 };
-        } else if (user.role === 'region_manager') {
-            return { region_id: user.region.id, year: getYear(currentDate), month: getMonth(currentDate) + 1 };
-        } else {
-            return { year: getYear(currentDate), month: getMonth(currentDate) + 1 };
+
+        // Add filters from props for Head Office and Region Manager dashboards
+        if (selectedRegionId) {
+            filters.region_id = selectedRegionId;
         }
+        if (selectedBranchId) {
+            filters.branch_id = selectedBranchId;
+        }
+
+        return filters;
     };
 
     const timelineFilters = getTimelineFilters();
@@ -35,13 +47,12 @@ const AnalyticsReport = ({ user }) => {
         data: allShiftsData,
         loading: analyticsLoading,
         error: analyticsError
-    } = useAnalytics('all-shifts-timeline', timelineFilters); // Changed endpoint to all-shifts-timeline
+    } = useAnalytics('all-shifts-timeline', timelineFilters);
 
     return (
-        <Accordion.Item value="reports">
-            <Accordion.Control>Shifts Analytics</Accordion.Control>
-            <Accordion.Panel>
-                <Group position="apart" my="md">
+        <Paper withBorder shadow="md" p="md" mt="lg">
+            <Stack>
+                <Group position="apart">
                     <Button variant="light" onClick={handlePreviousMonth} leftIcon={<IconChevronLeft size={16} />} type="button">
                         Previous Month
                     </Button>
@@ -56,8 +67,8 @@ const AnalyticsReport = ({ user }) => {
                     error={analyticsError}
                     currentDate={currentDate}
                 />
-            </Accordion.Panel>
-        </Accordion.Item>
+            </Stack>
+        </Paper>
     );
 };
 

@@ -1,14 +1,13 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
     Container,
     Title,
     Text,
-    Paper,
     Loader,
     Center,
-    Button,
 } from "@mantine/core";
 import { useAuth } from "../hooks/useAuth.jsx";
+import DashboardLayout from "../components/DashboardLayout.jsx";
 import HeadOfficeDashboard from "../components/HeadOfficeDashboard";
 import RegionManagerDashboard from "../components/RegionManagerDashboard";
 import ManagerDashboard from "../components/ManagerDashboard";
@@ -16,6 +15,7 @@ import EmployeeDashboard from "../components/EmployeeDashboard";
 
 const Dashboard = () => {
     const { user, loading, logout } = useAuth();
+    const [currentView, setCurrentView] = useState('dashboard');
 
     if (loading) {
         return (
@@ -39,37 +39,22 @@ const Dashboard = () => {
     const renderDashboard = () => {
         switch (user.role) {
             case "head_office":
-                return <HeadOfficeDashboard user={user} />;
+                return <HeadOfficeDashboard user={user} currentView={currentView} />;
             case "region_manager":
-                return <RegionManagerDashboard user={user} />;
+                return <RegionManagerDashboard user={user} currentView={currentView} />;
             case "branch_manager":
-                return <ManagerDashboard user={user} />;
+                return <ManagerDashboard user={user} currentView={currentView} />;
             case "employee":
-                return <EmployeeDashboard user={user} />;
+                return <EmployeeDashboard user={user} currentView={currentView} />;
             default:
                 return <Text>User role not recognized. Please contact support.</Text>;
         }
     };
 
     return (
-        <Container size="xl" my="md">
-            <Paper p="lg" shadow="sm" mb="lg">
-                <Title order={1}>Welcome, {user.first_name}!</Title>
-                <Text mt="md">
-                {user.role}
-                </Text>
-                
-                {user.branch && user.branch.region && (
-                <Text>
-                    {user.branch.name} | {user.branch.region.name}
-                </Text>
-                )}
-                <Button onClick={logout} mt="md">
-                    Logout
-                </Button>
-            </Paper>
+        <DashboardLayout user={user} currentView={currentView} setCurrentView={setCurrentView}>
             {renderDashboard()}
-        </Container>
+        </DashboardLayout>
     );
 };
 
