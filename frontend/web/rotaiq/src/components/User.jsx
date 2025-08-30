@@ -7,26 +7,29 @@ import {
   rem,
   Divider,
 } from '@mantine/core';
-import { IconChevronRight } from '@tabler/icons-react';
 import { useAuth } from '../hooks/useAuth.jsx';
+import './MainLinks.css';
 
-export default function User() {
-  const { user, logout } = useAuth();
+export default function User({ setCurrentView, onLinkClick }) {
+  const { user } = useAuth();
   if (!user) {
     return null;
   }
+  
+  const handleProfileClick = () => {
+    setCurrentView('user-profile');
+    // Call the toggle function to collapse the navbar on mobile
+    if (onLinkClick) {
+      onLinkClick();
+    }
+  };
 
   return (
     <>
       <Divider my="sm" />
       <UnstyledButton
-        sx={(theme) => ({
-          display: 'block',
-          width: '100%',
-          padding: theme.spacing.md,
-          color: theme.colorScheme === 'dark' ? theme.colors.dark[0] : theme.black,
-        })}
-        onClick={logout}
+        onClick={handleProfileClick}
+        className="main-link"
       >
         <Group>
           <Avatar
@@ -34,10 +37,10 @@ export default function User() {
             radius="xl"
           />
           <div style={{ flex: 1 }}>
-            <Text size="sm" weight={500}>
+            <Text size="sm" className="main-link-text">
               {user.first_name} {user.last_name}
             </Text>
-            <Text color="dimmed" size="xs">
+            <Text size="xs" color="dimmed" sx={{ color: '#fff' }}>
               {user.email}
             </Text>
           </div>

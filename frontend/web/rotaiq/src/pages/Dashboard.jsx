@@ -12,9 +12,11 @@ import HeadOfficeDashboard from "../components/HeadOfficeDashboard";
 import RegionManagerDashboard from "../components/RegionManagerDashboard";
 import ManagerDashboard from "../components/ManagerDashboard";
 import EmployeeDashboard from "../components/EmployeeDashboard";
+import UserProfile from "../components/UserProfile.jsx";
 
 const Dashboard = () => {
     const { user, loading, logout } = useAuth();
+    // This state manages which sub-page of the dashboard is displayed.
     const [currentView, setCurrentView] = useState('dashboard');
 
     if (loading) {
@@ -36,24 +38,33 @@ const Dashboard = () => {
         );
     }
 
-    const renderDashboard = () => {
-        switch (user.role) {
-            case "head_office":
-                return <HeadOfficeDashboard user={user} currentView={currentView} />;
-            case "region_manager":
-                return <RegionManagerDashboard user={user} currentView={currentView} />;
-            case "branch_manager":
-                return <ManagerDashboard user={user} currentView={currentView} />;
-            case "employee":
-                return <EmployeeDashboard user={user} currentView={currentView} />;
+    // This function will render the correct sub-page.
+    const renderContent = () => {
+        // First, check for specific sub-pages.
+        switch (currentView) {
+            case 'user-profile':
+                return <UserProfile />;
+            // Add other cases for different views here later if needed
             default:
-                return <Text>User role not recognized. Please contact support.</Text>;
+                // If no specific sub-page is selected, render the role-based dashboard.
+                switch (user.role) {
+                    case "head_office":
+                        return <HeadOfficeDashboard user={user} currentView={currentView} />;
+                    case "region_manager":
+                        return <RegionManagerDashboard user={user} currentView={currentView} />;
+                    case "branch_manager":
+                        return <ManagerDashboard user={user} currentView={currentView} />;
+                    case "employee":
+                        return <EmployeeDashboard user={user} currentView={currentView} />;
+                    default:
+                        return <Text>User role not recognized. Please contact support.</Text>;
+                }
         }
     };
 
     return (
         <DashboardLayout user={user} currentView={currentView} setCurrentView={setCurrentView}>
-            {renderDashboard()}
+            {renderContent()}
         </DashboardLayout>
     );
 };

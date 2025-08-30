@@ -56,7 +56,7 @@ const DashboardLayout = ({ children, user, currentView, setCurrentView }) => {
           </Stack>
         </AppShell.Section>
         <AppShell.Section>
-          <User />
+          <User setCurrentView={setCurrentView} onLinkClick={toggle} />
         </AppShell.Section>
       </AppShell.Navbar>
 
