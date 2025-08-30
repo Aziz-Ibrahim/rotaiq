@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
     Container,
     Title,
@@ -11,54 +11,26 @@ import {
     Center,
     Button,
     Modal,
-    TextInput,
     PasswordInput,
     Stack,
     FileButton
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { IconLock, IconUserEdit, IconUpload, IconLink } from '@tabler/icons-react';
+import { IconLock, IconUserEdit, IconUpload } from '@tabler/icons-react';
 import apiClient from '../api/apiClient.js';
 import { useAuth } from '../hooks/useAuth.jsx';
 import { notifications } from '@mantine/notifications';
 
 const UserProfile = () => {
-    const { user } = useAuth();
-    const [userProfile, setUserProfile] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-
-    // State for modals
+    const { user, updateUserProfile } = useAuth();
     const [passwordModalOpened, { open: openPasswordModal, close: closePasswordModal }] = useDisclosure(false);
     const [avatarModalOpened, { open: openAvatarModal, close: closeAvatarModal }] = useDisclosure(false);
-
-    // State for forms
     const [passwordForm, setPasswordForm] = useState({
         currentPassword: '',
         newPassword: '',
         confirmNewPassword: ''
     });
-    const [avatarInput, setAvatarInput] = useState({
-        type: 'url', // 'url' or 'file'
-        value: ''
-    });
-
-    useEffect(() => {
-        const fetchUserProfile = async () => {
-            try {
-                const response = await apiClient.get('api/users/me/');
-                setUserProfile(response.data);
-                const initialAvatarUrl = response.data.avatar || 'https://raw.githubusercontent.com/mantinedev/mantine/master/.demo/avatars/avatar-8.png';
-                setAvatarInput(prev => ({ ...prev, value: initialAvatarUrl }));
-            } catch (err) {
-                setError(err);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchUserProfile();
-    }, []);
+    const [avatarFile, setAvatarFile] = useState(null);
 
     const handleChangePassword = async (event) => {
         event.preventDefault();
@@ -75,6 +47,7 @@ const UserProfile = () => {
             await apiClient.post('api/users/change_password/', {
                 current_password: passwordForm.currentPassword,
                 new_password: passwordForm.newPassword,
+                confirm_new_password: passwordForm.confirmNewPassword,
             });
             notifications.show({
                 title: 'Success',
@@ -94,25 +67,32 @@ const UserProfile = () => {
 
     const handleChangeAvatar = async (event) => {
         event.preventDefault();
+        if (!avatarFile) {
+            notifications.show({
+                title: 'Error',
+                message: 'Please select a file to upload.',
+                color: 'red',
+            });
+            return;
+        }
+
         try {
-            if (avatarInput.type === 'url') {
-                await apiClient.patch('api/users/me/', {
-                    avatar: avatarInput.value
-                });
-            } else {
-                const formData = new FormData();
-                formData.append('avatar', avatarInput.value);
-                // Note: The API endpoint below is a placeholder. You'll need to create it on your Django backend.
-                await apiClient.post('api/users/upload_avatar/', formData, {
-                    headers: { 'Content-Type': 'multipart/form-data' },
-                });
-            }
+            const formData = new FormData();
+            formData.append('avatar', avatarFile);
+            const response = await apiClient.post('api/users/upload_avatar/', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            });
+            
+            // The backend now returns the full user object with the new avatar URL
+            updateUserProfile(response.data);
+
             notifications.show({
                 title: 'Success',
                 message: 'Profile picture updated successfully.',
                 color: 'green',
             });
             closeAvatarModal();
+            setAvatarFile(null);
         } catch (err) {
             notifications.show({
                 title: 'Avatar Change Failed',
@@ -122,7 +102,7 @@ const UserProfile = () => {
         }
     };
 
-    if (loading) {
+    if (!user) {
         return (
             <Center style={{ height: "80vh" }}>
                 <Loader size="xl" />
@@ -130,44 +110,41 @@ const UserProfile = () => {
         );
     }
 
-    if (error) {
-        return <Text color="red">Error loading profile: {error.message}</Text>;
-    }
-
-    if (!userProfile) {
-        return <Text>No user profile data available.</Text>;
-    }
+    // Construct the full avatar URL for display
+    const avatarSrc = user.avatar
+        ? `http://localhost:8000${user.avatar}`
+        : 'https://raw.githubusercontent.com/mantinedev/mantine/master/.demo/avatars/avatar.png';
 
     return (
         <Container my="md">
             <Paper shadow="md" p="xl">
                 <Group>
                     <Avatar
-                        src={avatarInput.type === 'url' ? avatarInput.value : URL.createObjectURL(avatarInput.value)}
+                        src={avatarSrc}
                         size="xl"
                         radius="xl"
                     />
                     <div>
-                        <Title order={2}>{userProfile.first_name} {userProfile.last_name}</Title>
-                        <Text size="md" color="dimmed">{userProfile.role.replace(/_/g, ' ')}</Text>
+                        <Title order={2}>{user.first_name} {user.last_name}</Title>
+                        <Text size="md" color="dimmed">{user.role.replace(/_/g, ' ')}</Text>
                     </div>
                 </Group>
                 <Divider my="lg" />
                 <Stack>
                     <Group position="apart">
                         <Text fw={700}>Email:</Text>
-                        <Text>{userProfile.email}</Text>
+                        <Text>{user.email}</Text>
                     </Group>
-                    {userProfile.branch && (
+                    {user.branch && (
                         <>
                             <Group position="apart">
                                 <Text fw={700}>Branch:</Text>
-                                <Text>{userProfile.branch.name}</Text>
+                                <Text>{user.branch.name}</Text>
                             </Group>
-                            {userProfile.branch.region && (
+                            {user.branch.region && (
                                 <Group position="apart">
                                     <Text fw={700}>Region:</Text>
-                                    <Text>{userProfile.branch.region.name}</Text>
+                                    <Text>{user.branch.region.name}</Text>
                                 </Group>
                             )}
                         </>
@@ -205,41 +182,23 @@ const UserProfile = () => {
             >
                 <form onSubmit={handleChangeAvatar}>
                     <Stack>
-                        <Group>
-                            <Button
-                                leftSection={<IconLink size={16} />}
-                                variant={avatarInput.type === 'url' ? 'filled' : 'subtle'}
-                                onClick={() => setAvatarInput({ type: 'url', value: '' })}
-                            >
-                                Use URL
-                            </Button>
-                            <FileButton
-                                onChange={(file) => setAvatarInput({ type: 'file', value: file })}
-                                accept="image/png,image/jpeg"
-                            >
-                                {(props) => (
-                                    <Button
-                                        leftSection={<IconUpload size={16} />}
-                                        variant={avatarInput.type === 'file' ? 'filled' : 'subtle'}
-                                        {...props}
-                                    >
-                                        Upload File
-                                    </Button>
-                                )}
-                            </FileButton>
-                        </Group>
-                        {avatarInput.type === 'url' ? (
-                            <TextInput
-                                label="Avatar URL"
-                                placeholder="Paste a link to your image"
-                                value={avatarInput.value}
-                                onChange={(event) => setAvatarInput({ ...avatarInput, value: event.currentTarget.value })}
-                                required
-                            />
-                        ) : (
-                            <Text fz="sm">Selected file: {avatarInput.value?.name || 'None'}</Text>
+                        <FileButton
+                            onChange={setAvatarFile}
+                            accept="image/png,image/jpeg"
+                        >
+                            {(props) => (
+                                <Button
+                                    leftSection={<IconUpload size={16} />}
+                                    {...props}
+                                >
+                                    Upload File
+                                </Button>
+                            )}
+                        </FileButton>
+                        {avatarFile && (
+                            <Text fz="sm" mt="sm">Selected file: {avatarFile.name}</Text>
                         )}
-                        <Button type="submit">Save Changes</Button>
+                        <Button type="submit" mt="md">Save Changes</Button>
                     </Stack>
                 </form>
             </Modal>

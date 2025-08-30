@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
 from rest_framework.exceptions import PermissionDenied
+from rest_framework.parsers import MultiPartParser, FormParser
 from django.shortcuts import get_object_or_404
 from django.db import transaction
 from django.db.models import Q, Count
@@ -60,15 +61,73 @@ class UserViewSet(viewsets.ModelViewSet):
         elif user.role == 'branch_manager':
             # Branch managers can only see employees in their own branch
             return queryset.filter(branch=user.branch)
-        
+
         # Regular employees can only see their own profile
         return queryset.filter(id=user.id)
-    
+
     @action(detail=False, methods=['get'], url_path='me')
     def get_me(self, request):
+        """
+        Custom action to retrive user details
+        """
         user = request.user
         serializer = self.get_serializer(user)
         return Response(serializer.data)
+
+    @action(detail=False, methods=['patch'], url_path='me')
+    def update_me(self, request):
+        """
+        Custom action to allow a user to update their own profile.
+        """
+        user = request.user
+        serializer = self.get_serializer(user, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+
+    @action(
+            detail=False, methods=['post'],
+            parser_classes=(MultiPartParser, FormParser),
+            url_path='upload_avatar'
+    )
+    def upload_avatar(self, request):
+        """
+        Custom action to handle avatar file uploads.
+        """
+        if not request.user.is_authenticated:
+            return Response(
+                {'detail': 'Authentication credentials were not provided.'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        
+        user = request.user
+        serializer = UserAvatarSerializer(user, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            
+            # Use the full user serializer to return the complete user object
+            full_serializer = self.get_serializer(user)
+            return Response(full_serializer.data, status=status.HTTP_200_OK)
+            
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=['post'])
+    def change_password(self, request):
+        """
+        Custom action to handle user password changes.
+        """
+        serializer = PasswordChangeSerializer(
+            data=request.data, context={'request': request}
+        )
+        if serializer.is_valid():
+            # Get the authenticated user and set the new password
+            user = request.user
+            user.set_password(serializer.validated_data['new_password'])
+            user.save()
+            return Response(
+                {'status': 'password set'}, status=status.HTTP_200_OK
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class RegionViewSet(viewsets.ReadOnlyModelViewSet):

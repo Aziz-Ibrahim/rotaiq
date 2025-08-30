@@ -173,6 +173,11 @@ class User(AbstractBaseUser, PermissionsMixin):
         related_name='managers',
         help_text="The region a manager is associated with."
     )
+    avatar = models.ImageField(
+        upload_to='avatars/',
+        blank=True,
+        null=True
+    )
     is_active = models.BooleanField(
         default=True,
         help_text="Designates whether this user should be treated as active."

@@ -47,6 +47,13 @@ export const AuthProvider = ({ children }) => {
         setUser(null);
     };
 
+    const updateUserProfile = (updatedData) => {
+        setUser(prevUser => ({
+            ...prevUser,
+            ...updatedData
+        }));
+    };
+
     useEffect(() => {
         const token = localStorage.getItem('token');
         if (token) {
@@ -55,7 +62,7 @@ export const AuthProvider = ({ children }) => {
                 if (decodedToken && decodedToken.id) {
                     fetchUserDetails(decodedToken.id);
                 } else {
-                    console.error("Token is missing the numeric 'id' field.");
+                    console.error("Token is missing the 'id' field.");
                     localStorage.clear();
                     setLoading(false);
                 }
@@ -67,10 +74,10 @@ export const AuthProvider = ({ children }) => {
         } else {
             setLoading(false);
         }
-    }, []); // Ensure this dependency array is empty to run only once
+    }, []);
 
     return (
-        <AuthContext.Provider value={{ user, loading, login, logout }}>
+        <AuthContext.Provider value={{ user, loading, login, logout, updateUserProfile }}>
             {children}
         </AuthContext.Provider>
     );

@@ -215,6 +215,39 @@ class UserSerializer(serializers.ModelSerializer):
         read_only_fields = ('email', 'role', 'branch', 'region')
 
 
+class UserAvatarSerializer(serializers.ModelSerializer):
+    """
+    Serializes user avatar 
+    """
+    avatar = serializers.ImageField(required=True)
+
+    class Meta:
+        """
+        Meta options for UserAvatarSerializer
+        """
+        model = User
+        fields = ['avatar']
+
+
+class PasswordChangeSerializer(serializers.Serializer):
+    current_password = serializers.CharField(required=True)
+    new_password = serializers.CharField(required=True)
+    confirm_new_password = serializers.CharField(required=True)
+
+    def validate_current_password(self, value):
+        user = self.context['request'].user
+        if not user.check_password(value):
+            raise serializers.ValidationError(
+                "Current password is not correct."
+            )
+        return value
+
+    def validate(self, data):
+        if data['new_password'] != data['confirm_new_password']:
+            raise serializers.ValidationError("New passwords must match.")
+        return data
+
+
 class InvitationSerializer(serializers.ModelSerializer):
     """
     Serializes invitation data for creating a new invitation.
