@@ -3,8 +3,10 @@
 import axios from 'axios';
 import { jwtDecode } from 'jwt-decode';
 
+const API_URL = 'https://rotaiq.uk/api/';
+
 const apiClient = axios.create({
-    baseURL: 'http://127.0.0.1:8000/',
+    baseURL: API_URL,
 });
 
 apiClient.interceptors.request.use(
