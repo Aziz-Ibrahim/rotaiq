@@ -1,26 +1,29 @@
 services:
-# A Database to store your Django application data
-- type: "web"
-name: "rotaiq-backend"
-env: "python"
-buildCommand: "./build.sh"
-startCommand: "gunicorn rotaiq.wsgi:application"
-envVars:
-- key: "SECRET_KEY"
-generateValue: true
-- key: "DATABASE_URL"
-fromDatabase:
-name: "rotaiq_db"
-property: "connectionString"
-
-  # Frontend Static Site
-  - type: "static_site"
-    name: "rotaiq-frontend"
-    env: "node"
-    staticPublishPath: "./frontend/build"
+  # A Web Service to serve your Django backend
+  - type: web
+    name: rotaiq-backend
+    env: python
+    buildCommand: "pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate"
+    startCommand: "gunicorn rotaiq.wsgi:application"
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: rotaiq_db
+          property: connectionString
+  
+  # A Static Site to serve your React frontend
+  - type: static_site
+    name: rotaiq-frontend
+    env: node
+    staticPublishPath: ./frontend/build
     buildCommand: "npm install && npm run build"
-    pullRequestPreviewsEnabled: false # Change to true if you want preview deployments
+    pullRequestPreviewsEnabled: false
+    # domains:
+    #   - rotaiq.uk
+    #   - www.rotaiq.uk
 
-# Database
+# PostgreSQL database
 databases:
-  - name: "rotaiq_db"
+  - name: rotaiq_db
