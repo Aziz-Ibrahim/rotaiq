@@ -1,1 +1,1 @@
-web: gunicorn --bind 0.0.0.0:10000 rota_gaps_app.wsgi --settings=rota_gaps_app.settings.production
+web: gunicorn rota_gaps_app.wsgi
