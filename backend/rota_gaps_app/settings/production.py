@@ -26,6 +26,7 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 CORS_ALLOWED_ORIGINS = [
     "https://rotaiq.uk",
     "https://www.rotaiq.uk",
+    "https://rotaiq-frontend.onrender.com",
 ]
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'

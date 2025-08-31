@@ -1,9 +1,7 @@
-// src/api/apiClient.js
-
 import axios from 'axios';
 import { jwtDecode } from 'jwt-decode';
 
-const API_URL = 'https://rotaiq.uk/api/';
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api/';
 
 const apiClient = axios.create({
     baseURL: API_URL,
@@ -29,12 +27,10 @@ apiClient.interceptors.response.use(
     async (error) => {
         const originalRequest = error.config;
         
-        // This check is crucial to prevent the TypeError
         if (error.response && error.response.status === 401 && originalRequest.url !== 'api/token/' && originalRequest.url !== 'api/token/refresh/') {
             const refreshToken = localStorage.getItem('refresh');
             if (refreshToken) {
                 try {
-                    // Use a relative URL here instead of a hardcoded one
                     const response = await apiClient.post('api/token/refresh/', {
                         refresh: refreshToken
                     });
