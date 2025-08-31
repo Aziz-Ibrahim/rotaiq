@@ -152,13 +152,13 @@ const UserProfile = () => {
                 </Stack>
                 <Divider my="lg" />
                 <Group position="apart">
-                    <Button
+                    {/* <Button
                         leftSection={<IconUserEdit size={16} />}
                         variant="subtle"
                         onClick={openAvatarModal}
                     >
                         Change Avatar
-                    </Button>
+                    </Button> */}
                     <Button
                         leftSection={<IconLock size={16} />}
                         variant="subtle"
