@@ -1,0 +1,1 @@
+web: gunicorn rotaiq.wsgi:application

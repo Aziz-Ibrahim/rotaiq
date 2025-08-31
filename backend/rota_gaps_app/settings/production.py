@@ -1,26 +1,27 @@
 from .base import *
 import os
+import dj_database_url
+from whitenoise.storage import CompressedManifestStaticFilesStorage
 
 DEBUG = False
 
-SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
+SECRET_KEY = os.environ.get('SECRET_KEY')
 
-ALLOWED_HOSTS = ['rotaiq.uk', 'www.rotaiq.uk']
+ALLOWED_HOSTS = [os.environ.get('ALLOWED_HOSTS')]
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'your_database_name',
-        'USER': 'your_database_user',
-        'PASSWORD': 'your_database_password',
-        'HOST': 'localhost',
-        'PORT': '5432',
-    }
+    'default': dj_database_url.config(
+        default=os.environ.get('DATABASE_URL'),
+        conn_max_age=600
+    )
 }
+
+MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
 
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesFilesStorage'
 
 CORS_ALLOWED_ORIGINS = [
     "https://rotaiq.uk",
