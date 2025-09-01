@@ -296,13 +296,6 @@ class InvitationSerializer(serializers.ModelSerializer):
         representation.pop('email', None)
         return representation
 
-    def create(self, validated_data):
-        """
-        Custom create method to handle the invitation creation.
-        """
-        email = validated_data.pop('email')
-        invitation = Invitation.objects.create(email=email, **validated_data)
-        return invitation
 
 
 class ShiftClaimSerializer(serializers.ModelSerializer):
