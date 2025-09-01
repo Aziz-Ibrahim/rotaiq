@@ -35,12 +35,10 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     """
     token = serializers.UUIDField(write_only=True)
     password = serializers.CharField(write_only=True)
-    first_name = serializers.CharField(required=True)
-    last_name = serializers.CharField(required=True)
 
     class Meta:
         model = User
-        fields = ['token', 'first_name', 'last_name', 'password']
+        fields = ['token', 'password'] # Simplified fields
         extra_kwargs = {
             'password': {'write_only': True},
         }
@@ -50,8 +48,13 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         Validates the invitation token and ensures it's not used.
         """
         token = data.get('token')
+        if not token:
+            raise serializers.ValidationError({"detail": "Token is required."})
+
         try:
-            invitation = Invitation.objects.get(token=token, is_used=False)
+            invitation = Invitation.objects.get(
+                Q(token=token) & Q(is_used=False)
+            )
         except Invitation.DoesNotExist:
             raise serializers.ValidationError(
                 {"detail": "Invalid or expired invitation link."}
@@ -61,7 +64,10 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         data['email'] = invitation.email
         data['role'] = invitation.role
         data['branch'] = invitation.branch
+        data['first_name'] = invitation.first_name
+        data['last_name'] = invitation.last_name
         data['invitation'] = invitation
+
         return data
 
     def create(self, validated_data):
@@ -71,7 +77,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         invitation = validated_data.pop('invitation')
         
         try:
-            # Attempt to create the user with the validated data
+            # Create the user with data from the validated dictionary
             user = User.objects.create_user(
                 email=validated_data['email'],
                 password=validated_data['password'],
@@ -89,6 +95,11 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             # Catch the specific database error for duplicate emails
             raise serializers.ValidationError(
                 {"detail": "This email is already registered."}
+            )
+        except KeyError as e:
+            # Catch unexpected missing keys
+            raise serializers.ValidationError(
+                {"detail": f"Missing data for user creation: {e}"}
             )
 
 
