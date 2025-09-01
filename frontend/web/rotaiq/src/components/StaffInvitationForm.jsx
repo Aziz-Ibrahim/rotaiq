@@ -1,4 +1,3 @@
-// src/components/StaffInvitationForm.jsx
 import React, { useState } from 'react';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
@@ -35,9 +34,17 @@ export default function StaffInvitationForm({ branches = [], roles = defaultRole
       setInviteData(null);
 
       try {
-        const response = await apiClient.post('/api/invitations/', values);
+        // Find the branch name from the branches prop based on the selected branch ID
+        const branchObject = branches.find(branch => branch.value === values.branch);
         
+        // Create the payload to send to the API
+        const payload = {
+          ...values,
+          branch: branchObject ? branchObject.label : values.branch
+        };
 
+        const response = await apiClient.post('/api/invitations/', payload);
+        
         const token = response.data?.token;
 
         if (!token) {
