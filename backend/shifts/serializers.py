@@ -270,6 +270,9 @@ class InvitationSerializer(serializers.ModelSerializer):
         required=True,
         help_text="Recipient's email address."
     )
+    first_name = serializers.CharField(required=True)
+    last_name = serializers.CharField(required=True)
+    role = serializers.CharField(required=True)
     branch = serializers.SlugRelatedField(
         queryset=Branch.objects.all(),
         slug_field='name',
@@ -281,7 +284,10 @@ class InvitationSerializer(serializers.ModelSerializer):
         Meta options for InvitationSerializer
         """
         model = Invitation
-        fields = ['token', 'branch', 'email', 'is_used', 'created_at']
+        fields = [
+            'token', 'branch', 'email', 'first_name', 'last_name',
+            'role', 'is_used', 'created_at'
+        ]
         read_only_fields = ['token', 'is_used', 'created_at']
 
     def to_representation(self, instance):
