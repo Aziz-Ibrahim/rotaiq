@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Invitation to Join the Team</title>
+</head>
+<body style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;">
+    <div style="max-width: 600px; margin: auto; background-color: #ffffff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+        <h2 style="color: #333333; text-align: center;">You've Got an Invitation!</h2>
+        <p>Hello,</p>
+        <p>{{ sender_name }} from {{ sender_branch }} has invited you to join their team on RotaIQ.</p>
+        <p>To accept this invitation and create your account, please follow the link below:</p>
+        <p style="text-align: center; margin: 20px 0;">
+            <a href="{{ invitation_url }}" style="background-color: #007bff; color: #ffffff; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Join the Team</a>
+        </p>
+        <p>Alternatively, you can scan the QR code below:</p>
+        <p style="text-align: center;">
+            <img src="data:image/png;base64,{{ qr_code_image }}" alt="QR Code for Invitation" style="width: 150px; height: 150px;">
+        </p>
+        <p>Or copy and paste this link into your browser:</p>
+        <p>{{ invitation_url }}</p>
+        <p>We look forward to having you on board!</p>
+        <hr style="border: 0; border-top: 1px solid #eeeeee; margin: 20px 0;">
+        <p style="font-size: 12px; color: #999999; text-align: center;">This is an automated message. Please do not reply.</p>
+    </div>
+</body>
+</html>

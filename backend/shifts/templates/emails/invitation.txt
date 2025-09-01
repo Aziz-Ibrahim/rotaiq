@@ -1,0 +1,11 @@
+Hello,
+
+{{ sender_name }} from {{ sender_branch }} has invited you to join their team on RotaIQ.
+
+To accept this invitation and create your account, please follow the link below:
+
+{{ invitation_url }}
+
+We look forward to having you on board!
+
+This is an automated message. Please do not reply.

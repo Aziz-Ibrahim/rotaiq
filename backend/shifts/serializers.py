@@ -254,16 +254,29 @@ class InvitationSerializer(serializers.ModelSerializer):
 
     This serializer is used by managers to send invitations to new employees.
     """
-    branch = serializers.PrimaryKeyRelatedField(
-        queryset=Branch.objects.all()
+    email = serializers.EmailField(
+        write_only=True,
+        required=True,
+        help_text="Recipient's email address."
     )
+    branch = serializers.SlugRelatedField(
+        queryset=Branch.objects.all(),
+        slug_field='name',
+        required=True
+    )
+    
     class Meta:
+        """
+        Meta options for InvitationSerializer
+        """
         model = Invitation
-        fields = [
-            'email', 'first_name', 'last_name', 'branch', 'role', 'token',
-            'is_used', 'created_at'
-        ]
-        read_only_fields = ['is_used', 'created_at']
+        fields = ['token', 'branch', 'email', 'is_used', 'created_at']
+        read_only_fields = ['token', 'is_used', 'created_at']
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        representation.pop('email', None)
+        return representation
 
 
 class ShiftClaimSerializer(serializers.ModelSerializer):

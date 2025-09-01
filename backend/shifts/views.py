@@ -14,6 +14,7 @@ from django.contrib.auth import get_user_model
 from .models import *
 from .permissions import IsManagerOrReadOnly
 from .serializers import *
+from .emails import send_invitation_email
 
 
 class UserRegistrationView(generics.CreateAPIView):
@@ -213,13 +214,16 @@ class InvitationViewSet(
 
     def create(self, request, *args, **kwargs):
         """
-        Creates a new invitation based on the manager's role and returns the
-        serialized data, including the newly created token.
+        Creates a new invitation, sends an email, and returns the
+        serialized data.
         """
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         
         user = self.request.user
+        email = serializer.validated_data.pop('email')
+        
+        invitation = None
 
         # Branch Managers can only create invitations for their own branch
         if user.role == 'branch_manager':
@@ -229,7 +233,7 @@ class InvitationViewSet(
                     "You can only create invitations for your own branch."
                 )
             
-            serializer.save(branch=user.branch)
+            invitation = serializer.save(branch=user.branch)
 
         # Region Managers can create invitations for any branch in their region
         elif user.role == 'region_manager':
@@ -243,18 +247,32 @@ class InvitationViewSet(
                     "You can only create invitations for branches in your "
                     "region."
                 )
-
-            serializer.save(branch=invitation_branch)
+            invitation = serializer.save(branch=invitation_branch)
 
         else:
             raise PermissionDenied(
                 "You do not have permission to perform this action."
             )
-            
+        
+        if invitation:
+            try:
+                send_invitation_email(
+                    sender_name=user.get_full_name() or user.username,
+                    sender_branch=(
+                        user.branch.name if user.branch else "Head Office"
+                    ),
+                    recipient_email=email,
+                    token=invitation.token
+                )
+            except Exception as e:
+                # Log the error but don't fail the API call
+                print(f"Failed to send invitation email: {e}")
+
         headers = self.get_success_headers(serializer.data)
         return Response(
             serializer.data, status=status.HTTP_201_CREATED, headers=headers
         )
+
 
 
 class ShiftViewSet(viewsets.ModelViewSet):
