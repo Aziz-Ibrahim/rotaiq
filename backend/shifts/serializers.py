@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.db import IntegrityError
+from django.db.models import Q
 
 from .models import *
 
@@ -294,6 +295,14 @@ class InvitationSerializer(serializers.ModelSerializer):
         representation = super().to_representation(instance)
         representation.pop('email', None)
         return representation
+
+    def create(self, validated_data):
+        """
+        Custom create method to handle the invitation creation.
+        """
+        email = validated_data.pop('email')
+        invitation = Invitation.objects.create(email=email, **validated_data)
+        return invitation
 
 
 class ShiftClaimSerializer(serializers.ModelSerializer):
