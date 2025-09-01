@@ -221,7 +221,6 @@ class InvitationViewSet(
         serializer.is_valid(raise_exception=True)
         
         user = self.request.user
-        email = serializer.validated_data.pop('email')
         
         invitation = None
 
@@ -233,6 +232,7 @@ class InvitationViewSet(
                     "You can only create invitations for your own branch."
                 )
             
+            # Save the invitation with the branch from the current user
             invitation = serializer.save(branch=user.branch)
 
         # Region Managers can create invitations for any branch in their region
@@ -247,6 +247,8 @@ class InvitationViewSet(
                     "You can only create invitations for branches in your "
                     "region."
                 )
+            
+            # Save the invitation with the branch from the validated data
             invitation = serializer.save(branch=invitation_branch)
 
         else:
@@ -256,12 +258,13 @@ class InvitationViewSet(
         
         if invitation:
             try:
+                # The invitation object now has the email saved to it
                 send_invitation_email(
                     sender_name=user.get_full_name() or user.username,
                     sender_branch=(
                         user.branch.name if user.branch else "Head Office"
                     ),
-                    recipient_email=email,
+                    recipient_email=invitation.email,  # Use the saved email
                     token=invitation.token
                 )
             except Exception as e:
