@@ -26,10 +26,10 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS', '').split(',')
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.sendgrid.net'
+EMAIL_HOST = 'smtp-relay.brevo.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'apikey'
-EMAIL_HOST_PASSWORD = os.environ.get('SENDGRID_API_KEY')
-DEFAULT_FROM_EMAIL = 'support@rotaiq.uk'
+EMAIL_HOST_USER = os.environ.get('BREVO_SMTP_LOGIN')
+EMAIL_HOST_PASSWORD = os.environ.get('BREVO_SMTP_PASSWORD')
+DEFAULT_FROM_EMAIL = 'info@rotaiq.uk'
 
