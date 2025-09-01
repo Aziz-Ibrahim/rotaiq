@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { jwtDecode } from 'jwt-decode';
 
-const API_URL = 'https://rotaiq-backend.onrender.com/';
+const API_URL = 'https://rotaiq.onrender.com/';
 
 const apiClient = axios.create({
     baseURL: API_URL,
