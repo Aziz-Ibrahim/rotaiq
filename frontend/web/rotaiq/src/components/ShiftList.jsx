@@ -1,18 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import { useShiftList } from '../hooks/useShiftList.jsx';
 import { useAuth } from '../hooks/useAuth.jsx';
-import { Title, Text, Button, Accordion, Badge, Stack } from '@mantine/core';
+import { Title, Text, Accordion, Stack } from '@mantine/core';
+import { notifications } from '@mantine/notifications';
 import ShiftCard from './ShiftCard.jsx';
 import apiClient from '../api/apiClient.js';
 
-const ShiftList = ({ viewType, onUpdate }) => {
+const ShiftList = ({ viewType, onUpdate, staffList }) => { // Accept staffList as a prop
     const { user } = useAuth();
     const { shifts, loading, error, fetchShifts } = useShiftList();
     const [claiming, setClaiming] = useState(false);
 
     useEffect(() => {
         fetchShifts();
-        const intervalId = setInterval(fetchShifts, 30000000);
+        const intervalId = setInterval(fetchShifts, 30000);
         return () => clearInterval(intervalId);
     }, [fetchShifts]);
 
@@ -28,16 +29,28 @@ const ShiftList = ({ viewType, onUpdate }) => {
         if (claiming) return;
         setClaiming(true);
         try {
-            await apiClient.post(`/api/shifts/${shiftId}/claim/`);
-            alert("Shift claimed successfully. It's now pending manager approval.");
+            const response = await apiClient.post(`/api/shifts/${shiftId}/claim/`);
+            notifications.show({
+                title: 'Success!',
+                message: response.data.status,
+                color: 'green',
+            });
             await fetchShifts();
             if (onUpdate) onUpdate();
         } catch (error) {
             console.error('Error claiming shift:', error.response?.data || error.message);
-            alert(error.response?.data?.error || 'Failed to claim shift.');
+            notifications.show({
+                title: 'Error!',
+                message: error.response?.data?.error || 'Failed to claim shift.',
+                color: 'red',
+            });
         } finally {
             setClaiming(false);
         }
+    };
+
+    const handleAssignSuccess = () => {
+        fetchShifts();
     };
     
     const filteredShifts = shifts.filter(shift => {
@@ -45,10 +58,7 @@ const ShiftList = ({ viewType, onUpdate }) => {
 
         switch (viewType) {
             case 'open_shifts':
-                if (user.role === 'employee' || user.role === 'floating_employee') {
-                    return shift.status === 'open';
-                }
-                return false;
+                return shift.status === 'open';
             case 'pending_claims':
                 return shift.claims.some(claim => claim.status === 'pending');
             case 'my_posted_shifts':
@@ -69,6 +79,8 @@ const ShiftList = ({ viewType, onUpdate }) => {
             user={user} 
             onUpdate={fetchShifts} 
             onClaim={handleClaim} 
+            staffList={staffList}
+            onAssignSuccess={handleAssignSuccess}
         />
     ));
 
