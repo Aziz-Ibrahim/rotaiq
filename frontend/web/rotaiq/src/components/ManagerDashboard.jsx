@@ -21,6 +21,7 @@ import { useRegionList } from '../hooks/useRegionList.jsx';
 import { useShiftList } from '../hooks/useShiftList.jsx';
 
 const ManagerDashboard = ({ currentView }) => {
+    // Destructure everything from the hooks
     const { user, loading: authLoading, error: authError } = useAuth();
     const { userList, loading: userLoading, error: userError, fetchUsers } = useUserList();
     const { branches, loading: branchesLoading, error: branchesError, fetchBranches } = useBranchList();
@@ -29,9 +30,11 @@ const ManagerDashboard = ({ currentView }) => {
 
     const [selectedBranchId, setSelectedBranchId] = useState(null);
 
+    // Combine all loading and error states
     const isLoading = authLoading || userLoading || branchesLoading || regionsLoading || shiftsLoading;
     const isError = authError || userError || branchesError || regionsError || shiftsError;
 
+    // Trigger the initial data fetch only once on mount
     useEffect(() => {
         fetchUsers();
         fetchBranches();
@@ -46,19 +49,15 @@ const ManagerDashboard = ({ currentView }) => {
         return <Text color="red">Error: Failed to load data. Please check your network connection and try again.</Text>;
     }
     
-    // Check for user and their branch/region before proceeding.
-    if (!user || !user.branch || !user.branch.region) {
-        return <Text color="red">Error: User data is incomplete. Missing branch or region information.</Text>;
-    }
-    
-    const userRegionId = user.branch.region.id;
+    // 'user' is populated, proceed with filtering
+    const userRegionId = user.branch?.region?.id;
 
     const availableBranches = (branches || [])
         .filter(b => b.region && b.region.id === userRegionId)
         .map(b => ({ value: b.id.toString(), label: b.name }));
 
     const regionalStaff = (userList || []).filter(u => u.branch?.region?.id === userRegionId);
-
+    
     const regionalShifts = (shifts || []).filter(s => s.branch?.region?.id === userRegionId);
 
     const isManager = user.role === 'branch_manager' || user.role === 'region_manager';

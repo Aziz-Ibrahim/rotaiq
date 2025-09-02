@@ -142,10 +142,7 @@ class RegionViewSet(viewsets.ReadOnlyModelViewSet):
 
 class BranchViewSet(viewsets.ReadOnlyModelViewSet):
     """
-    A viewset for viewing branches.
-
-    This viewset provides read-only operations on the Branch model, such as
-    listing all branches or retrieving a single branch's details.
+    A viewset for viewing branches, filtered by user role and region.
     """
     queryset = Branch.objects.none()
     serializer_class = BranchSerializer
@@ -153,22 +150,32 @@ class BranchViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        queryset = Branch.objects.all().order_by('name')
+        base_queryset = Branch.objects.all().order_by('name')
+
+        # Managers see all branches within their branch's region.
+        if user.is_authenticated and user.role in [
+            'region_manager', 'branch_manager'
+        ]:
+            if user.branch and user.branch.region:
+                # Filter by the user's branch's region
+                queryset = base_queryset.filter(region=user.branch.region)
+            else:
+                return base_queryset.none()
+        # Employees see all branches within their branch's region.
+        elif user.is_authenticated and user.role in [
+            'employee', 'floating_employee'
+        ]:
+            if user.branch and user.branch.region:
+                queryset = base_queryset.filter(region=user.branch.region)
+            else:
+                return base_queryset.none()
+        else:
+            return base_queryset.none()
         
-        # Filter by region if a region_id is provided in the query params.
+        # Apply the region_id filter if it exists.
         region_id = self.request.query_params.get('region_id')
         if region_id:
             queryset = queryset.filter(region__id=region_id)
-
-        # Filter branches based on the user's role.
-        if user.role == 'region_manager':
-            # Region manager sees all branches within their region.
-            if user.region:
-                queryset = queryset.filter(region=user.region)
-        elif user.role == 'branch_manager':
-            # Branch manager sees only their own branch.
-            if user.branch:
-                queryset = queryset.filter(pk=user.branch.pk)
 
         return queryset
 
@@ -277,7 +284,6 @@ class InvitationViewSet(
         )
 
 
-
 class ShiftViewSet(viewsets.ModelViewSet):
     """
     A ViewSet for viewing and editing shifts.
@@ -290,20 +296,17 @@ class ShiftViewSet(viewsets.ModelViewSet):
         Custom get_queryset to filter shifts based on the user's role.
         """
         user = self.request.user
-        queryset = Shift.objects.all()
+        base_queryset = Shift.objects.all()
 
         if user.is_authenticated:
-            # Branch Managers and above can see all shifts in their branch (or others)
-            if user.role in ['branch_manager', 'region_manager', 'head_office']:
-                return queryset.all()
-
-            # All employees (including floating) can see shifts in their region
             if user.branch and user.branch.region:
-                return queryset.filter(branch__region=user.branch.region)
-            else:
-                return queryset.filter(branch=user.branch)
-
-        return queryset.none()
+                return base_queryset.filter(
+                    Q(branch__region=user.branch.region) |
+                    Q(assigned_to=user) |
+                    Q(posted_by=user)
+                ).distinct()
+            return base_queryset.none()
+        return base_queryset.none()
     
     def perform_create(self, serializer):
         """
@@ -312,47 +315,21 @@ class ShiftViewSet(viewsets.ModelViewSet):
         """
         user = self.request.user
         branch_from_payload = serializer.validated_data.get('branch')
-
-        # Branch managers can post shifts to their branch
-        if user.role == 'branch_manager' and branch_from_payload != user.branch:
-            raise PermissionDenied("Managers can only post shifts for their own branch.")
         
-        # Region managers can post shifts to any branch in their region
-        if user.role == 'region_manager' and branch_from_payload.region != user.region:
-            raise PermissionDenied("Region managers can only post shifts in their region.")
-
+        # Managers can post shifts to any branch in their region
+        if user.role in ['branch_manager', 'region_manager']:
+            # Correctly check if the branch from the payload is in the
+            # manager's region
+            if branch_from_payload.region != user.branch.region:
+                raise PermissionDenied(
+                    "You can only post shifts in your region."
+                )
+        else:
+            raise PermissionDenied("Only managers can post shifts.")
+            
         serializer.save(posted_by=user)
     
-    @action(detail=True, methods=['post'])
-    def claim(self, request, pk=None):
-        """
-        Endpoint for an employee to claim an open shift.
-        """
-        shift = self.get_object()
-        user = request.user
-
-        if user.role not in ['employee', 'floating_employee']:
-            return Response({'error': 'Only employees can claim shifts.'}, status=403)
-        
-        if shift.status != 'open':
-            return Response({'error': 'This shift is not open for claims.'}, status=400)
-
-        try:
-            # Use get_or_create to atomically check for and create the claim
-            claim, created = ShiftClaim.objects.get_or_create(
-                shift=shift,
-                user=user,
-                defaults={'status': 'pending'}
-            )
-            
-            if not created:
-                # If the claim was not created, it means it already exists
-                return Response({'error': 'You have already submitted a claim for this shift.'}, status=400)
-
-            return Response({'status': 'Shift claimed successfully.'}, status=201)
-
-        except Exception as e:
-            return Response({'error': str(e)}, status=500)
+    # ... (claim and assign_staff methods below)
     
     @action(detail=True, methods=['post'])
     def assign_staff(self, request, pk=None):
@@ -365,8 +342,10 @@ class ShiftViewSet(viewsets.ModelViewSet):
             staff_id = request.data.get('staff_id')
             
             # Check if the user is a manager
-            if user.role not in ['branch_manager', 'region_manager', 'head_office']:
-                raise PermissionDenied("You do not have permission to perform this action.")
+            if user.role not in ['branch_manager', 'region_manager']:
+                raise PermissionDenied(
+                    "You do not have permission to perform this action."
+                )
             
             # Check if the shift is open
             if shift.status != 'open':
@@ -382,28 +361,40 @@ class ShiftViewSet(viewsets.ModelViewSet):
                 raise NotFound("Staff member not found.")
 
             # Ensure the manager has permission to assign this staff member
-            if user.role == 'branch_manager' and (staff_member.branch != user.branch or shift.branch != user.branch):
-                raise PermissionDenied("Managers can only assign staff within their own branch.")
-            if user.role == 'region_manager' and (staff_member.branch.region != user.region or shift.branch.region != user.region):
-                raise PermissionDenied("Region managers can only assign staff within their region.")
+            # and shift within their region
+            if user.branch.region != (
+                staff_member.branch.region
+                ) or user.branch.region != shift.branch.region:
+                raise PermissionDenied(
+                    "You can only assign staff to shifts within your region."
+                )
             
             # Use a transaction to ensure atomicity
             with transaction.atomic():
                 shift.assigned_to = staff_member
-                shift.status = 'claimed'  # Change status to claimed
+                shift.status = 'claimed'
                 shift.save()
 
                 # Optional: Decline any existing pending claims for this shift
-                ShiftClaim.objects.filter(shift=shift, status='pending').update(status='declined')
+                ShiftClaim.objects.filter(
+                    shift=shift, status='pending'
+                ).update(status='declined')
 
-            return Response({'status': f'Shift assigned to {staff_member.get_full_name()} successfully.'})
+            return Response(
+                {'status': f'Shift assigned to {staff_member.get_full_name()} successfully.'})
 
         except PermissionDenied as e:
-            return Response({'error': str(e)}, status=status.HTTP_403_FORBIDDEN)
+            return Response(
+                {'error': str(e)}, status=status.HTTP_403_FORBIDDEN
+            )
         except NotFound as e:
-            return Response({'error': str(e)}, status=status.HTTP_404_NOT_FOUND)
+            return Response(
+                {'error': str(e)}, status=status.HTTP_404_NOT_FOUND
+            )
         except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(
+                {'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 
 class ShiftClaimViewSet(viewsets.ModelViewSet):

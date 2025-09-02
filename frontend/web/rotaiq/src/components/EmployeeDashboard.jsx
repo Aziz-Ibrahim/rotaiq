@@ -1,48 +1,65 @@
-import React, { useEffect, useState } from 'react';
+// This is a conceptual example for the Employee Dashboard
+import React, { useState, useEffect } from 'react';
+import {
+    Container,
+    Title,
+    Text,
+    LoadingOverlay,
+    Tabs,
+} from '@mantine/core';
+
+import ShiftList from '../components/ShiftList.jsx';
 import { useAuth } from '../hooks/useAuth.jsx';
-import { Container, Title, Text, LoadingOverlay } from '@mantine/core';
-import ShiftList from './ShiftList.jsx';
 import { useShiftList } from '../hooks/useShiftList.jsx';
+import { useUserList } from '../hooks/useUserList.jsx'; // To get staff list for ShiftList
 
 const EmployeeDashboard = ({ currentView }) => {
-    const { user, loading: authLoading } = useAuth();
+    const { user, loading: authLoading, error: authError } = useAuth();
     const { shifts, loading: shiftsLoading, error: shiftsError, fetchShifts } = useShiftList();
+    const { userList, loading: userLoading, error: userError, fetchUsers } = useUserList();
 
-    // Fetch shifts once on load and every 30 seconds
+    const isLoading = authLoading || shiftsLoading || userLoading;
+    const isError = authError || shiftsError || userError;
+
     useEffect(() => {
         fetchShifts();
-        const intervalId = setInterval(fetchShifts, 30000);
-        return () => clearInterval(intervalId);
-    }, [fetchShifts]);
-
-    if (authLoading || shiftsLoading) {
+        fetchUsers();
+    }, [fetchShifts, fetchUsers]);
+    
+    if (isLoading) {
         return <LoadingOverlay visible={true} />;
     }
-
-    if (shiftsError) {
-        return <Text color="red">Error: Failed to load shifts.</Text>;
+    
+    if (isError) {
+        return <Text color="red">Error: Failed to load data.</Text>;
     }
-
-    // Filter shifts based on the user's branch's region for open shifts
-    const userRegionId = user.branch?.region?.id;
-    const regionalShifts = shifts.filter(shift => shift.branch?.region?.id === userRegionId);
-
+    
     const renderContent = () => {
         switch (currentView) {
-            case 'dashboard':
+            case 'open-shifts':
                 return (
                     <>
-                        <Title order={2}>Employee Dashboard</Title>
-                        <Text>Welcome back, {user.first_name}! Here are the available shifts.</Text>
-                        <ShiftList viewType="open_shifts" shifts={regionalShifts} onUpdate={fetchShifts} />
+                        <Title order={2}>Open Shifts</Title>
+                        <Text>View and claim available shifts in your region.</Text>
+                        <ShiftList 
+                            viewType="open_shifts" 
+                            shifts={shifts} 
+                            staffList={userList} 
+                            onUpdate={fetchShifts} 
+                        />
                     </>
                 );
             case 'my-claims':
                 return (
                     <>
-                        <Title order={2}>My Claims</Title>
-                        <Text>View all the shifts you have claimed.</Text>
-                        <ShiftList viewType="my_claims" shifts={regionalShifts} onUpdate={fetchShifts} />
+                        <Title order={2}>My Shifts</Title>
+                        <Text>Shifts you have claimed and are awaiting approval.</Text>
+                        <ShiftList 
+                            viewType="my_claims" 
+                            shifts={shifts} 
+                            staffList={userList} 
+                            onUpdate={fetchShifts} 
+                        />
                     </>
                 );
             default:
