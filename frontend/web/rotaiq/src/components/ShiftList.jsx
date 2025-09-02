@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { useShiftList } from '../hooks/useShiftList.jsx';
 import { useAuth } from '../hooks/useAuth.jsx';
 import { Title, Text, Accordion, Stack } from '@mantine/core';
@@ -6,28 +6,15 @@ import { notifications } from '@mantine/notifications';
 import ShiftCard from './ShiftCard.jsx';
 import apiClient from '../api/apiClient.js';
 
-const ShiftList = ({ viewType, onUpdate, staffList }) => { 
+// Now accepts shifts and staffList as props, or uses the hook if props are not provided
+const ShiftList = ({ viewType, onUpdate, shifts: propShifts, staffList: propStaffList }) => { 
     const { user } = useAuth();
-    const { shifts, loading, error, fetchShifts } = useShiftList();
-    const [claiming, setClaiming] = useState(false);
-
-    useEffect(() => {
-        fetchShifts();
-        const intervalId = setInterval(fetchShifts, 30000);
-        return () => clearInterval(intervalId);
-    }, [fetchShifts]);
-
-    if (loading) {
-        return <Text>Loading shifts...</Text>;
-    }
-
-    if (error) {
-        return <Text color="red">Error: Failed to load shifts.</Text>;
-    }
+    // Only use the hook if props are not provided
+    const { shifts: hookShifts, loading, error, fetchShifts } = useShiftList();
+    const shifts = propShifts || hookShifts;
+    const staffList = propStaffList || []; // We'll assume ManagerDashboard passes this
 
     const handleClaim = async (shiftId) => {
-        if (claiming) return;
-        setClaiming(true);
         try {
             const response = await apiClient.post(`/api/shifts/${shiftId}/claim/`);
             notifications.show({
@@ -35,8 +22,9 @@ const ShiftList = ({ viewType, onUpdate, staffList }) => {
                 message: response.data.status,
                 color: 'green',
             });
-            await fetchShifts();
+            // Call the appropriate update function
             if (onUpdate) onUpdate();
+            else fetchShifts();
         } catch (error) {
             console.error('Error claiming shift:', error.response?.data || error.message);
             notifications.show({
@@ -44,32 +32,35 @@ const ShiftList = ({ viewType, onUpdate, staffList }) => {
                 message: error.response?.data?.error || 'Failed to claim shift.',
                 color: 'red',
             });
-        } finally {
-            setClaiming(false);
         }
     };
 
-    const handleAssignSuccess = () => {
-        fetchShifts();
-    };
-    
-    // FIX: This is the most important fix. Ensure 'shifts' is always an array.
+    // Filter shifts based on viewType and user's branch
     const filteredShifts = (shifts || []).filter(shift => {
-        if (!user || !user.role) return false;
+        if (!user || !user.role || !shift.branch || !shift.branch.region) return false;
+        
+        // Ensure shifts are for the user's region
+        if (shift.branch.region.id !== user.branch?.region?.id) {
+            return false;
+        }
 
         switch (viewType) {
             case 'open_shifts':
-                return shift.status === 'open';
+                // Floating employees can see all open shifts in their region
+                if (user.role === 'floating_employee') {
+                    return shift.status === 'open' && shift.branch.region.id === user.branch?.region?.id;
+                }
+                // Regular employees only see open shifts in their branch
+                return shift.status === 'open' && shift.branch.id === user.branch?.id;
             case 'pending_claims':
-                // FIX: Ensure 'shift.claims' is an array before using `.some()`
                 return (shift.claims || []).some(claim => claim.status === 'pending');
             case 'my_posted_shifts':
                 return shift.posted_by === user.id;
             case 'my_claims':
-                // FIX: Ensure 'shift.claims' is an array before using `.some()`
                 return (shift.claims || []).some(claim => claim.user?.id === user.id);
             case 'all_shifts':
-                return true;
+                // This view is used by managers to see all shifts in their region.
+                return true; 
             default:
                 return false;
         }
@@ -80,10 +71,9 @@ const ShiftList = ({ viewType, onUpdate, staffList }) => {
             key={shift.id} 
             shift={shift} 
             user={user} 
-            onUpdate={fetchShifts} 
+            onUpdate={onUpdate} 
             onClaim={handleClaim} 
             staffList={staffList}
-            onAssignSuccess={handleAssignSuccess}
         />
     ));
 

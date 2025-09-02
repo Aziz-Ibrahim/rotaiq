@@ -1,17 +1,16 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useForm } from '@mantine/form';
 import { TextInput, Button, Group, Box, Title, Text, Stack, Select, Textarea } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { DateInput, TimeInput } from '@mantine/dates';
 import { IconClock } from '@tabler/icons-react';
-import { useAuth } from '../hooks/useAuth.jsx';
 import apiClient from '../api/apiClient.js';
-import { useUserList } from '../hooks/useUserList.jsx'; // This hook is used to get the staffList.
+import { useAuth } from '../hooks/useAuth.jsx';
 
-const ShiftPostForm = ({ onShiftPosted, staffList }) => {
+// Now accepts branches list as a prop
+const ShiftPostForm = ({ onShiftPosted, branches }) => {
     const { user } = useAuth();
     const [loading, setLoading] = useState(false);
-    const [branches, setBranches] = useState([]);
 
     const form = useForm({
         initialValues: {
@@ -31,33 +30,12 @@ const ShiftPostForm = ({ onShiftPosted, staffList }) => {
         },
     });
 
-    // Fetch the list of branches when the component mounts
-    useEffect(() => {
-        const fetchBranches = async () => {
-            try {
-                const response = await apiClient.get('/api/branches/');
-                // Check if the response data is an array before setting
-                if (Array.isArray(response.data)) {
-                    setBranches(response.data);
-                } else {
-                    console.error('API response for branches is not an array:', response.data);
-                    setBranches([]);
-                }
-            } catch (error) {
-                console.error('Failed to fetch branches:', error.response?.data || error.message);
-                setBranches([]);
-            }
-        };
-        fetchBranches();
-    }, []);
-
     const handleSubmit = async (values) => {
         setLoading(true);
         const shiftData = {
             ...values,
             start_time: values.start_time.toISOString(),
             end_time: values.end_time.toISOString(),
-            // Ensure branch ID is an integer
             branch: parseInt(values.branch, 10),
         };
 
@@ -84,10 +62,10 @@ const ShiftPostForm = ({ onShiftPosted, staffList }) => {
         }
     };
     
-    // Format the fetched branches for the Select component
+    // Format the branches prop for the Select component
     const formattedBranches = (branches || []).map(branch => ({
-        value: branch.id.toString(),
-        label: branch.name,
+        value: branch.value.toString(),
+        label: branch.label,
     }));
     
     const roleOptions = ['branch_manager', 'region_manager', 'employee', 'floating_employee'].map(role => ({
@@ -95,7 +73,6 @@ const ShiftPostForm = ({ onShiftPosted, staffList }) => {
         label: role.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
     }));
     
-
     return (
         <Box maw={600} mx="auto">
             <Title order={2} mb="md">Post a New Shift</Title>
