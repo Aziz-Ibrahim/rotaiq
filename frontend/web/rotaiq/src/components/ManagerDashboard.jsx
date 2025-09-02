@@ -22,7 +22,6 @@ import { useShiftList } from '../hooks/useShiftList.jsx';
 
 const ManagerDashboard = ({ currentView }) => {
     const { user, loading: authLoading, error: authError } = useAuth();
-    // These hooks now provide all data, which we will filter locally.
     const { userList, loading: userLoading, error: userError, fetchUsers } = useUserList();
     const { branches, loading: branchesLoading, error: branchesError, fetchBranches } = useBranchList();
     const { regions, loading: regionsLoading, error: regionsError } = useRegionList();
@@ -34,7 +33,6 @@ const ManagerDashboard = ({ currentView }) => {
     const isLoading = authLoading || userLoading || branchesLoading || regionsLoading || shiftsLoading;
     const isError = authError || userError || branchesError || regionsError || shiftsError;
 
-    // Use a single useEffect to refetch all data on component mount or a manual refresh
     useEffect(() => {
         fetchUsers();
         fetchBranches();
@@ -52,16 +50,13 @@ const ManagerDashboard = ({ currentView }) => {
     // Determine the user's region ID from their branch
     const userRegionId = user.branch?.region?.id;
 
-    // 1. Filter branches by the user's region
-    const availableBranches = branches
+    const availableBranches = (branches || [])
         .filter(b => b.region && b.region.id === userRegionId)
         .map(b => ({ value: b.id.toString(), label: b.name }));
-        
-    // 2. Filter staff by the user's region
-    const regionalStaff = userList.filter(u => u.branch?.region?.id === userRegionId);
 
-    // 3. Filter shifts by the user's region
-    const regionalShifts = shifts.filter(s => s.branch?.region?.id === userRegionId);
+    const regionalStaff = (userList || []).filter(u => u.branch?.region?.id === userRegionId);
+
+    const regionalShifts = (shifts || []).filter(s => s.branch?.region?.id === userRegionId);
 
     const isManager = user.role === 'branch_manager' || user.role === 'region_manager';
 
@@ -130,7 +125,7 @@ const ManagerDashboard = ({ currentView }) => {
                     { value: 'floating_employee', label: 'Floating Employee' }
                 ].filter(role => user.role === 'region_manager' || role.value !== 'region_manager');
 
-                const invitationBranches = branches
+                const invitationBranches = (branches || [])
                     .filter(b => b.region?.id === userRegionId)
                     .map(b => ({ value: b.id.toString(), label: b.name }));
 
