@@ -48,7 +48,11 @@ const ManagerDashboard = ({ currentView }) => {
     if (isError) {
         return <Text color="red">Error: Failed to load data. Please check your network connection and try again.</Text>;
     }
-    
+
+    if (!shifts) {
+        return <LoadingOverlay visible={true} />;
+    }
+
     // 'user' is populated, proceed with filtering
     const userRegionId = user.branch?.region?.id;
 

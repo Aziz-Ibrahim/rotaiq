@@ -35,13 +35,18 @@ const ShiftPostForm = ({ onShiftPosted, branches }) => {
     });
 
     // Helper function to combine date and time from two separate Date objects
-    const combineDateAndTime = (date, time) => {
-        if (!date || !time) return null;
+    const combineDateAndTime = (date, timeString) => {
+        if (!date || !timeString) return null;
+        
+        // Split the "HH:mm" string to get hours and minutes
+        const [hours, minutes] = timeString.split(':').map(Number);
+        
         const combined = new Date(date);
-        combined.setHours(time.getHours());
-        combined.setMinutes(time.getMinutes());
+        combined.setHours(hours);
+        combined.setMinutes(minutes);
         combined.setSeconds(0);
         combined.setMilliseconds(0);
+        
         return combined;
     };
 
