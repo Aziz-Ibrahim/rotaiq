@@ -52,11 +52,14 @@ const ClaimList = ({ claims, onUpdate }) => {
         }
     };
 
+    // FIX: Ensure 'claims' is always an array
+    const validClaims = claims || [];
+
     return (
         <Stack mt="md">
             <Divider label="Claims" labelPosition="center" />
-            {claims.length > 0 ? (
-                claims.map(claim => (
+            {validClaims.length > 0 ? (
+                validClaims.map(claim => (
                     <Group key={claim.id} position="apart" spacing="md" noWrap>
                         <Stack spacing={2}>
                             <Group spacing="xs">

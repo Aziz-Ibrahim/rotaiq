@@ -6,7 +6,7 @@ import { notifications } from '@mantine/notifications';
 import ShiftCard from './ShiftCard.jsx';
 import apiClient from '../api/apiClient.js';
 
-const ShiftList = ({ viewType, onUpdate, staffList }) => { // Accept staffList as a prop
+const ShiftList = ({ viewType, onUpdate, staffList }) => { 
     const { user } = useAuth();
     const { shifts, loading, error, fetchShifts } = useShiftList();
     const [claiming, setClaiming] = useState(false);
@@ -53,18 +53,21 @@ const ShiftList = ({ viewType, onUpdate, staffList }) => { // Accept staffList a
         fetchShifts();
     };
     
-    const filteredShifts = shifts.filter(shift => {
+    // FIX: This is the most important fix. Ensure 'shifts' is always an array.
+    const filteredShifts = (shifts || []).filter(shift => {
         if (!user || !user.role) return false;
 
         switch (viewType) {
             case 'open_shifts':
                 return shift.status === 'open';
             case 'pending_claims':
-                return shift.claims.some(claim => claim.status === 'pending');
+                // FIX: Ensure 'shift.claims' is an array before using `.some()`
+                return (shift.claims || []).some(claim => claim.status === 'pending');
             case 'my_posted_shifts':
                 return shift.posted_by === user.id;
             case 'my_claims':
-                return shift.claims.some(claim => claim.user?.id === user.id);
+                // FIX: Ensure 'shift.claims' is an array before using `.some()`
+                return (shift.claims || []).some(claim => claim.user?.id === user.id);
             case 'all_shifts':
                 return true;
             default:

@@ -14,14 +14,13 @@ import { IconClock, IconMapPin, IconUser, IconCalendar } from '@tabler/icons-rea
 import { format } from 'date-fns';
 import apiClient from '../api/apiClient.js';
 import AssignStaffModal from './AssignStaffModal.jsx';
-import ClaimList from './ClaimList.jsx'; // Make sure you have this component
+import ClaimList from './ClaimList.jsx'; 
 
 const ShiftCard = ({ shift, user, onUpdate, staffList }) => {
     const [approving, setApproving] = useState(false);
     const [declining, setDeclining] = useState(false);
     const [modalOpened, setModalOpened] = useState(false);
 
-    // Helper to determine if the user is a manager
     const isManager = user.role === 'branch_manager' || user.role === 'region_manager';
 
     const handleApprove = async (claimId) => {
@@ -89,6 +88,7 @@ const ShiftCard = ({ shift, user, onUpdate, staffList }) => {
 
     const renderActionButtons = () => {
         if (isManager) {
+            // FIX: Add defensive check here
             const pendingClaims = (shift.claims || []).filter(claim => claim.status === 'pending');
             if (pendingClaims.length > 0) {
                 return (
@@ -133,7 +133,7 @@ const ShiftCard = ({ shift, user, onUpdate, staffList }) => {
         }
     };
 
-    // Use the defensive check here as well
+    // FIX: Add defensive checks here
     const isPendingClaim = (shift.claims || []).some(claim => claim.user?.id === user.id && claim.status === 'pending');
     const hasClaim = (shift.claims || []).some(claim => claim.user?.id === user.id);
 
@@ -205,7 +205,7 @@ const ShiftCard = ({ shift, user, onUpdate, staffList }) => {
                 onClose={() => setModalOpened(false)}
                 shift={shift}
                 staffList={staffList}
-                onAssignSuccess={onUpdate} // Re-fetch shifts on success
+                onAssignSuccess={onUpdate}
             />
         </Accordion.Item>
     );

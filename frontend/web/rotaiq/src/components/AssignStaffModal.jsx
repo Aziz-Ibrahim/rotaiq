@@ -38,7 +38,8 @@ const AssignStaffModal = ({ opened, onClose, shift, staffList, onAssignSuccess }
         }
     };
 
-    const formattedStaffList = staffList
+    // FIX: Add defensive check here for staffList
+    const formattedStaffList = (staffList || [])
         .filter(staff => staff.role === 'employee' || staff.role === 'floating_employee')
         .map(staff => ({
             value: staff.id.toString(),
