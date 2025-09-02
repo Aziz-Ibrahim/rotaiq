@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { useForm } from '@mantine/form';
+import { format } from 'date-fns';
 import { TextInput, Button, Group, Box, Title, Text, Stack, Select, Textarea } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { DateInput, TimeInput } from '@mantine/dates';
 import { IconClock } from '@tabler/icons-react';
+
 import apiClient from '../api/apiClient.js';
 import { useAuth } from '../hooks/useAuth.jsx';
 
@@ -16,6 +18,7 @@ const ShiftPostForm = ({ onShiftPosted, branches }) => {
         initialValues: {
             title: '',
             description: '',
+            date: null,
             start_time: null,
             end_time: null,
             role: '',
@@ -23,6 +26,7 @@ const ShiftPostForm = ({ onShiftPosted, branches }) => {
         },
         validate: {
             title: (value) => (value.trim() === '' ? 'Shift title is required' : null),
+            date: (value) => (value ? null : 'Date is required'),
             start_time: (value) => (value ? null : 'Start time is required'),
             end_time: (value) => (value ? null : 'End time is required'),
             role: (value) => (value === '' ? 'Please select a role' : null),
@@ -30,12 +34,39 @@ const ShiftPostForm = ({ onShiftPosted, branches }) => {
         },
     });
 
+    // Helper function to combine date and time from two separate Date objects
+    const combineDateAndTime = (date, time) => {
+        if (!date || !time) return null;
+        const combined = new Date(date);
+        combined.setHours(time.getHours());
+        combined.setMinutes(time.getMinutes());
+        combined.setSeconds(0);
+        combined.setMilliseconds(0);
+        return combined;
+    };
+
     const handleSubmit = async (values) => {
         setLoading(true);
+
+        const startDateTime = combineDateAndTime(values.date, values.start_time);
+        const endDateTime = combineDateAndTime(values.date, values.end_time);
+
+        if (!startDateTime || !endDateTime) {
+            notifications.show({
+                title: 'Error',
+                message: 'Please select both a date and a time.',
+                color: 'red',
+            });
+            setLoading(false);
+            return;
+        }
+
         const shiftData = {
-            ...values,
-            start_time: values.start_time.toISOString(),
-            end_time: values.end_time.toISOString(),
+            title: values.title,
+            description: values.description,
+            start_time: startDateTime.toISOString(),
+            end_time: endDateTime.toISOString(),
+            role: values.role,
             branch: parseInt(values.branch, 10),
         };
 
@@ -89,21 +120,29 @@ const ShiftPostForm = ({ onShiftPosted, branches }) => {
                         {...form.getInputProps('description')}
                     />
                     <DateInput
-                        label="Date"
-                        placeholder="Select date"
-                        {...form.getInputProps('start_time')}
+                        placeholder="Shift Date"
+                        value={form.values.date}
+                        onChange={(date) => {
+                            form.setFieldValue('date', date);
+                        }}
+                        label="Shift Date"
+                        {...form.getInputProps('date')}
                     />
                     <Group grow>
                         <TimeInput
                             label="Start Time"
                             placeholder="Select start time"
                             icon={<IconClock size="1rem" />}
+                            value={form.values.start_time}
+                            onChange={(time) => form.setFieldValue('start_time', time)}
                             {...form.getInputProps('start_time')}
                         />
                         <TimeInput
                             label="End Time"
                             placeholder="Select end time"
                             icon={<IconClock size="1rem" />}
+                            value={form.values.end_time}
+                            onChange={(time) => form.setFieldValue('end_time', time)}
                             {...form.getInputProps('end_time')}
                         />
                     </Group>

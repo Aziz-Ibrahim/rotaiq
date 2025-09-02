@@ -1,18 +1,16 @@
-import React, { useEffect } from 'react';
-import { useShiftList } from '../hooks/useShiftList.jsx';
-import { useAuth } from '../hooks/useAuth.jsx';
+import React from 'react';
 import { Title, Text, Accordion, Stack } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
-import ShiftCard from './ShiftCard.jsx';
-import apiClient from '../api/apiClient.js';
+import { isSameDay, isToday } from 'date-fns';
 
-// Now accepts shifts and staffList as props, or uses the hook if props are not provided
+import { useAuth } from '../hooks/useAuth.jsx';
+import apiClient from '../api/apiClient.js';
+import ShiftCard from './ShiftCard.jsx';
+
 const ShiftList = ({ viewType, onUpdate, shifts: propShifts, staffList: propStaffList }) => { 
     const { user } = useAuth();
-    // Only use the hook if props are not provided
-    const { shifts: hookShifts, loading, error, fetchShifts } = useShiftList();
-    const shifts = propShifts || hookShifts;
-    const staffList = propStaffList || []; // We'll assume ManagerDashboard passes this
+    const shifts = propShifts || [];
+    const staffList = propStaffList || [];
 
     const handleClaim = async (shiftId) => {
         try {
@@ -24,7 +22,6 @@ const ShiftList = ({ viewType, onUpdate, shifts: propShifts, staffList: propStaf
             });
             // Call the appropriate update function
             if (onUpdate) onUpdate();
-            else fetchShifts();
         } catch (error) {
             console.error('Error claiming shift:', error.response?.data || error.message);
             notifications.show({
@@ -36,30 +33,34 @@ const ShiftList = ({ viewType, onUpdate, shifts: propShifts, staffList: propStaf
     };
 
     // Filter shifts based on viewType and user's branch
-    const filteredShifts = (shifts || []).filter(shift => {
-        if (!user || !user.role || !shift.branch || !shift.branch.region) return false;
-        
-        // Ensure shifts are for the user's region
-        if (shift.branch.region.id !== user.branch?.region?.id) {
+    const filteredShifts = shifts.filter(shift => {
+        // Ensure user and relevant data exist for comparison
+        if (!user || !user.branch?.region) {
+            return false;
+        }
+
+        // Apply a base filter to ensure shifts belong to the user's region
+        if (shift.branch?.region?.id !== user.branch.region.id) {
             return false;
         }
 
         switch (viewType) {
             case 'open_shifts':
-                // Floating employees can see all open shifts in their region
                 if (user.role === 'floating_employee') {
-                    return shift.status === 'open' && shift.branch.region.id === user.branch?.region?.id;
+                    return shift.status === 'open';
                 }
-                // Regular employees only see open shifts in their branch
-                return shift.status === 'open' && shift.branch.id === user.branch?.id;
+                return shift.status === 'open' && shift.branch?.id === user.branch.id;
             case 'pending_claims':
+                // Show shifts with at least one pending claim
                 return (shift.claims || []).some(claim => claim.status === 'pending');
             case 'my_posted_shifts':
+                // Show shifts the current user has posted
                 return shift.posted_by === user.id;
             case 'my_claims':
+                // Show shifts the current user has claimed
                 return (shift.claims || []).some(claim => claim.user?.id === user.id);
             case 'all_shifts':
-                // This view is used by managers to see all shifts in their region.
+                // Managers see all shifts in their region, so no additional filtering is needed.
                 return true; 
             default:
                 return false;
