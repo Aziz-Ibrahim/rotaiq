@@ -89,7 +89,7 @@ const ShiftCard = ({ shift, user, onUpdate, staffList }) => {
 
     const renderActionButtons = () => {
         if (isManager) {
-            const pendingClaims = shift.claims.filter(claim => claim.status === 'pending');
+            const pendingClaims = (shift.claims || []).filter(claim => claim.status === 'pending');
             if (pendingClaims.length > 0) {
                 return (
                     <Group mt="md">
@@ -133,9 +133,9 @@ const ShiftCard = ({ shift, user, onUpdate, staffList }) => {
         }
     };
 
-    // Check if the current user has a pending claim on this shift
-    const isPendingClaim = shift.claims.some(claim => claim.user?.id === user.id && claim.status === 'pending');
-    const hasClaim = shift.claims.some(claim => claim.user?.id === user.id);
+    // Use the defensive check here as well
+    const isPendingClaim = (shift.claims || []).some(claim => claim.user?.id === user.id && claim.status === 'pending');
+    const hasClaim = (shift.claims || []).some(claim => claim.user?.id === user.id);
 
     return (
         <Accordion.Item value={String(shift.id)}>
@@ -188,7 +188,7 @@ const ShiftCard = ({ shift, user, onUpdate, staffList }) => {
                     )}
 
                     {/* Manager actions */}
-                    {isManager && shift.claims && shift.claims.length > 0 && (
+                    {isManager && (shift.claims || []).length > 0 && (
                         <ClaimList claims={shift.claims} onUpdate={onUpdate} />
                     )}
                     {isManager && shift.status === 'open' && (
