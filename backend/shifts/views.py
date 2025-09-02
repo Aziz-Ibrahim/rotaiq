@@ -2,7 +2,7 @@ from rest_framework import viewsets, mixins, status, generics, permissions
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import PermissionDenied, NotFound
 from rest_framework.parsers import MultiPartParser, FormParser
 from django.shortcuts import get_object_or_404
 from django.db import transaction
@@ -15,6 +15,8 @@ from .models import *
 from .permissions import IsManagerOrReadOnly
 from .serializers import *
 from .emails import send_invitation_email
+
+User = get_user_model()
 
 
 class UserRegistrationView(generics.CreateAPIView):
@@ -38,8 +40,6 @@ class ManagerRegistrationView(generics.CreateAPIView):
     serializer_class = ManagerRegistrationSerializer
     permission_classes = [AllowAny]
 
-
-User = get_user_model()
 
 class UserViewSet(viewsets.ModelViewSet):
     """
@@ -293,23 +293,35 @@ class ShiftViewSet(viewsets.ModelViewSet):
         queryset = Shift.objects.all()
 
         if user.is_authenticated:
-            if user.role in ['branch_manager', 'employee']:
-                if user.branch:
-                    queryset = queryset.filter(branch=user.branch)
-            elif user.role == 'floating_employee':
-                if user.branch and user.branch.region:
-                    queryset = queryset.filter(branch__region=user.branch.region)
-            elif user.role == 'head_office':
-                # Head office can see all shifts
-                pass
-            
-        return queryset
+            # Branch Managers and above can see all shifts in their branch (or others)
+            if user.role in ['branch_manager', 'region_manager', 'head_office']:
+                return queryset.all()
 
+            # All employees (including floating) can see shifts in their region
+            if user.branch and user.branch.region:
+                return queryset.filter(branch__region=user.branch.region)
+            else:
+                return queryset.filter(branch=user.branch)
+
+        return queryset.none()
+    
     def perform_create(self, serializer):
         """
-        Set the `posted_by` field to the current authenticated user.
+        Set the `posted_by` field to the current authenticated user and
+        enforce permissions based on role.
         """
-        serializer.save(posted_by=self.request.user)
+        user = self.request.user
+        branch_from_payload = serializer.validated_data.get('branch')
+
+        # Branch managers can post shifts to their branch
+        if user.role == 'branch_manager' and branch_from_payload != user.branch:
+            raise PermissionDenied("Managers can only post shifts for their own branch.")
+        
+        # Region managers can post shifts to any branch in their region
+        if user.role == 'region_manager' and branch_from_payload.region != user.region:
+            raise PermissionDenied("Region managers can only post shifts in their region.")
+
+        serializer.save(posted_by=user)
     
     @action(detail=True, methods=['post'])
     def claim(self, request, pk=None):
@@ -341,6 +353,57 @@ class ShiftViewSet(viewsets.ModelViewSet):
 
         except Exception as e:
             return Response({'error': str(e)}, status=500)
+    
+    @action(detail=True, methods=['post'])
+    def assign_staff(self, request, pk=None):
+        """
+        Allows a manager to directly assign a staff member to a shift.
+        """
+        try:
+            shift = self.get_object()
+            user = request.user
+            staff_id = request.data.get('staff_id')
+            
+            # Check if the user is a manager
+            if user.role not in ['branch_manager', 'region_manager', 'head_office']:
+                raise PermissionDenied("You do not have permission to perform this action.")
+            
+            # Check if the shift is open
+            if shift.status != 'open':
+                return Response(
+                    {'error': 'This shift is not open for direct assignment.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Retrieve the staff member to be assigned
+            try:
+                staff_member = User.objects.get(id=staff_id)
+            except User.DoesNotExist:
+                raise NotFound("Staff member not found.")
+
+            # Ensure the manager has permission to assign this staff member
+            if user.role == 'branch_manager' and (staff_member.branch != user.branch or shift.branch != user.branch):
+                raise PermissionDenied("Managers can only assign staff within their own branch.")
+            if user.role == 'region_manager' and (staff_member.branch.region != user.region or shift.branch.region != user.region):
+                raise PermissionDenied("Region managers can only assign staff within their region.")
+            
+            # Use a transaction to ensure atomicity
+            with transaction.atomic():
+                shift.assigned_to = staff_member
+                shift.status = 'claimed'  # Change status to claimed
+                shift.save()
+
+                # Optional: Decline any existing pending claims for this shift
+                ShiftClaim.objects.filter(shift=shift, status='pending').update(status='declined')
+
+            return Response({'status': f'Shift assigned to {staff_member.get_full_name()} successfully.'})
+
+        except PermissionDenied as e:
+            return Response({'error': str(e)}, status=status.HTTP_403_FORBIDDEN)
+        except NotFound as e:
+            return Response({'error': str(e)}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class ShiftClaimViewSet(viewsets.ModelViewSet):
@@ -356,22 +419,33 @@ class ShiftClaimViewSet(viewsets.ModelViewSet):
         Approves a specific shift claim.
         """
         try:
-            claim = self.get_object()
-            if claim.status != 'pending':
-                return Response(
-                    {'error': 'Claim is not in a pending state.'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            
-            # Update the claim's status to 'approved'
-            claim.status = 'approved'
-            claim.save()
-            
-            # Find the shift and assign the user to it
-            shift = claim.shift
-            shift.assigned_to = claim.user
-            shift.status = 'claimed'
-            shift.save()
+            with transaction.atomic():
+                claim = self.get_object()
+                if claim.status != 'pending':
+                    return Response(
+                        {'error': 'Claim is not in a pending state.'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
+                # Update the claim's status to 'approved'
+                claim.status = 'approved'
+                claim.save()
+                
+                # Check for other pending claims on the same shift
+                other_claims = ShiftClaim.objects.filter(
+                    shift=claim.shift, status='pending'
+                ).exclude(pk=claim.pk)
+                
+                # Decline all other pending claims for this shift
+                for other_claim in other_claims:
+                    other_claim.status = 'declined'
+                    other_claim.save()
+
+                # Find the shift and assign the user to it
+                shift = claim.shift
+                shift.assigned_to = claim.user
+                shift.status = 'claimed'
+                shift.save()
 
             return Response({'status': 'Shift claim approved.'})
         except ShiftClaim.DoesNotExist:
@@ -397,10 +471,12 @@ class ShiftClaimViewSet(viewsets.ModelViewSet):
             claim.status = 'declined'
             claim.save()
 
-            # Get the shift and return its status to 'open'
+            # Get the shift and return its status to 'open' if no other claims exist
             shift = claim.shift
-            shift.status = 'open'
-            shift.save()
+            # If there are other pending claims, don't re-open the shift
+            if not ShiftClaim.objects.filter(shift=shift, status='pending').exists():
+                shift.status = 'open'
+                shift.save()
 
             return Response({'status': 'Shift claim declined.'})
         except ShiftClaim.DoesNotExist:
