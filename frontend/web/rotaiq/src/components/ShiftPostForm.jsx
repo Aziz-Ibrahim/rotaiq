@@ -1,121 +1,153 @@
-import React from 'react';
-import apiClient from '../api/apiClient';
-import { useAuth } from '../hooks/useAuth';
+import React, { useEffect, useState } from 'react';
 import { useForm } from '@mantine/form';
-import { Box, TextInput, Textarea, Button, Title, Text, Stack, Select } from '@mantine/core';
-import { DateTimePicker } from '@mantine/dates';
+import { TextInput, Button, Group, Box, Title, Text, Stack, Select, Textarea } from '@mantine/core';
+import { notifications } from '@mantine/notifications';
+import { DateInput, TimeInput } from '@mantine/dates';
+import { IconClock } from '@tabler/icons-react';
+import { useAuth } from '../hooks/useAuth.jsx';
+import apiClient from '../api/apiClient.js';
+import { useUserList } from '../hooks/useUserList.jsx'; // This hook is used to get the staffList.
 
-// Accept `branches` and `userRole` as props from the parent component.
-const ShiftPostForm = ({ onUpdate, branches, userRole }) => {
+const ShiftPostForm = ({ onShiftPosted, staffList }) => {
     const { user } = useAuth();
-    
-    // Determine if the user is a manager (and should see the dropdown)
-    const isManager = userRole === 'branch_manager' || userRole === 'region_manager';
+    const [loading, setLoading] = useState(false);
+    const [branches, setBranches] = useState([]);
 
     const form = useForm({
         initialValues: {
-            start_time: '',
-            end_time: '',
-            role: '',
+            title: '',
             description: '',
-            // Add a branch field to the form's state.
-            // Default to the user's branch ID if they are not a manager.
-            branch: isManager ? '' : (user?.branch?.id?.toString() || ''),
+            start_time: null,
+            end_time: null,
+            role: '',
+            branch: null,
         },
         validate: {
-            start_time: (value) => (value && new Date(value) > new Date() ? null : 'Start time cannot be in the past'),
-            end_time: (value, values) => {
-                if (!value) {
-                    return 'End time is required';
-                }
-                if (new Date(value) <= new Date(values.start_time)) {
-                    return 'End time must be after start time';
-                }
-                return null;
-            },
-            role: (value) => (value ? null : 'Role is required'),
-            description: (value) => (value ? null : 'Description is required'),
-            // Only validate the branch field for managers
-            branch: (value, values) => (isManager && !value ? 'Branch is required' : null),
+            title: (value) => (value.trim() === '' ? 'Shift title is required' : null),
+            start_time: (value) => (value ? null : 'Start time is required'),
+            end_time: (value) => (value ? null : 'End time is required'),
+            role: (value) => (value === '' ? 'Please select a role' : null),
+            branch: (value) => (value ? null : 'Branch is required'),
         },
     });
 
+    // Fetch the list of branches when the component mounts
+    useEffect(() => {
+        const fetchBranches = async () => {
+            try {
+                const response = await apiClient.get('/api/branches/');
+                // Check if the response data is an array before setting
+                if (Array.isArray(response.data)) {
+                    setBranches(response.data);
+                } else {
+                    console.error('API response for branches is not an array:', response.data);
+                    setBranches([]);
+                }
+            } catch (error) {
+                console.error('Failed to fetch branches:', error.response?.data || error.message);
+                setBranches([]);
+            }
+        };
+        fetchBranches();
+    }, []);
+
     const handleSubmit = async (values) => {
+        setLoading(true);
+        const shiftData = {
+            ...values,
+            start_time: values.start_time.toISOString(),
+            end_time: values.end_time.toISOString(),
+            // Ensure branch ID is an integer
+            branch: parseInt(values.branch, 10),
+        };
+
         try {
-            // Ensure necessary user data is available
-            if (!user?.id) {
-                console.error("User ID is missing. Cannot submit shift.");
-                return;
-            }
-
-            const formattedStartTime = values.start_time ? new Date(values.start_time).toISOString() : null;
-            const formattedEndTime = values.end_time ? new Date(values.end_time).toISOString() : null;
-
-            const shiftData = {
-                start_time: formattedStartTime,
-                end_time: formattedEndTime,
-                role: values.role,
-                description: values.description,
-                // Use the branch ID from the form for managers, otherwise use the user's branch.
-                branch: isManager ? parseInt(values.branch, 10) : user.branch.id,
-                posted_by: user.id,
-            };
-
-            console.log("Submitting shift data:", shiftData);
-            await apiClient.post('api/shifts/', shiftData);
-            
+            const response = await apiClient.post('/api/shifts/', shiftData);
+            notifications.show({
+                title: 'Success',
+                message: 'Shift posted successfully!',
+                color: 'green',
+            });
             form.reset();
-            if (onUpdate) {
-                onUpdate();
+            if (onShiftPosted) {
+                onShiftPosted(response.data);
             }
-        } catch (err) {
-            console.error("Error posting shift:", err.response ? err.response.data : err.message);
+        } catch (error) {
+            console.error('Shift post failed:', error.response?.data || error.message);
+            notifications.show({
+                title: 'Error',
+                message: error.response?.data?.error || 'Failed to post shift.',
+                color: 'red',
+            });
+        } finally {
+            setLoading(false);
         }
     };
+    
+    // Format the fetched branches for the Select component
+    const formattedBranches = (branches || []).map(branch => ({
+        value: branch.id.toString(),
+        label: branch.name,
+    }));
+    
+    const roleOptions = ['branch_manager', 'region_manager', 'employee', 'floating_employee'].map(role => ({
+        value: role,
+        label: role.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+    }));
+    
 
     return (
-        <Box maw={400} mx="auto" p="md">
-            <Title order={3}>Post a New Shift</Title>
+        <Box maw={600} mx="auto">
+            <Title order={2} mb="md">Post a New Shift</Title>
             <form onSubmit={form.onSubmit(handleSubmit)}>
                 <Stack>
-                    {/* Conditionally render the branch select for managers */}
-                    {isManager ? (
-                        <Select
-                            label="Select Branch"
-                            placeholder="Choose a branch"
-                            data={branches}
-                            {...form.getInputProps('branch')}
-                            searchable
-                        />
-                    ) : (
-                        // Display a read-only field for non-managers
-                        <TextInput
-                            label="Your Branch"
-                            value={user?.branch?.name || ''}
-                            readOnly
-                        />
-                    )}
-                    <DateTimePicker
-                        label="Start Time"
-                        placeholder="Pick date and time"
-                        {...form.getInputProps('start_time')}
-                    />
-                    <DateTimePicker
-                        label="End Time"
-                        placeholder="Pick date and time"
-                        {...form.getInputProps('end_time')}
-                    />
                     <TextInput
-                        label="Role"
-                        placeholder="e.g., Cashier"
-                        {...form.getInputProps('role')}
+                        label="Shift Title"
+                        placeholder="e.g., Weekend Cover"
+                        {...form.getInputProps('title')}
                     />
                     <Textarea
-                        label="Description"
-                        placeholder="Shift description"
+                        label="Shift Description"
+                        placeholder="Provide details about the shift"
                         {...form.getInputProps('description')}
                     />
-                    <Button type="submit">Post Shift</Button>
+                    <DateInput
+                        label="Date"
+                        placeholder="Select date"
+                        {...form.getInputProps('start_time')}
+                    />
+                    <Group grow>
+                        <TimeInput
+                            label="Start Time"
+                            placeholder="Select start time"
+                            icon={<IconClock size="1rem" />}
+                            {...form.getInputProps('start_time')}
+                        />
+                        <TimeInput
+                            label="End Time"
+                            placeholder="Select end time"
+                            icon={<IconClock size="1rem" />}
+                            {...form.getInputProps('end_time')}
+                        />
+                    </Group>
+                    <Select
+                        label="Required Role"
+                        placeholder="Select role"
+                        data={roleOptions}
+                        {...form.getInputProps('role')}
+                    />
+                    <Select
+                        label="Branch"
+                        placeholder="Select branch"
+                        data={formattedBranches}
+                        searchable
+                        {...form.getInputProps('branch')}
+                    />
+                    <Group position="right" mt="md">
+                        <Button type="submit" loading={loading}>
+                            Post Shift
+                        </Button>
+                    </Group>
                 </Stack>
             </form>
         </Box>

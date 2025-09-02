@@ -38,7 +38,6 @@ const AssignStaffModal = ({ opened, onClose, shift, staffList, onAssignSuccess }
         }
     };
 
-    // FIX: Add defensive check here for staffList
     const formattedStaffList = (staffList || [])
         .filter(staff => staff.role === 'employee' || staff.role === 'floating_employee')
         .map(staff => ({
@@ -47,7 +46,16 @@ const AssignStaffModal = ({ opened, onClose, shift, staffList, onAssignSuccess }
         }));
 
     return (
-        <Modal opened={opened} onClose={onClose} title="Assign Staff to Shift">
+        <Modal 
+            opened={opened} 
+            onClose={onClose} 
+            title="Assign Staff to Shift"
+            // ADDED STYLES FOR CENTERING
+            styles={{
+                root: { position: 'fixed' },
+                inner: { top: '50%', left: '50%', transform: 'translate(-50%, -50%)', padding: '1rem' }
+            }}
+        >
             <Text size="sm" mb="md">
                 Select a staff member to directly assign them to this shift without a claim.
             </Text>
