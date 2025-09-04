@@ -39,8 +39,8 @@ const ShiftList = ({ viewType, onUpdate, shifts: propShifts, staffList: propStaf
             return false;
         }
 
-        // Apply a base filter to ensure shifts belong to the user's region
-        if (shift.branch?.region?.id !== user.branch.region.id) {
+        // CORRECTED BASE FILTER
+        if (shift.branch_details?.region?.id !== user.branch.region.id) {
             return false;
         }
 
@@ -49,13 +49,13 @@ const ShiftList = ({ viewType, onUpdate, shifts: propShifts, staffList: propStaf
                 if (user.role === 'floating_employee') {
                     return shift.status === 'open';
                 }
-                return shift.status === 'open' && shift.branch?.id === user.branch.id;
+                return shift.status === 'open' && shift.branch_details?.id === user.branch.id;
             case 'pending_claims':
                 // Show shifts with at least one pending claim
                 return (shift.claims || []).some(claim => claim.status === 'pending');
             case 'my_posted_shifts':
                 // Show shifts the current user has posted
-                return shift.posted_by === user.id;
+                return shift.posted_by_details?.id === user.id;
             case 'my_claims':
                 // Show shifts the current user has claimed
                 return (shift.claims || []).some(claim => claim.user?.id === user.id);

@@ -1,4 +1,3 @@
-// This is a conceptual example for the Employee Dashboard
 import React, { useState, useEffect } from 'react';
 import {
     Container,
@@ -11,7 +10,7 @@ import {
 import ShiftList from '../components/ShiftList.jsx';
 import { useAuth } from '../hooks/useAuth.jsx';
 import { useShiftList } from '../hooks/useShiftList.jsx';
-import { useUserList } from '../hooks/useUserList.jsx'; // To get staff list for ShiftList
+import { useUserList } from '../hooks/useUserList.jsx';
 
 const EmployeeDashboard = ({ currentView }) => {
     const { user, loading: authLoading, error: authError } = useAuth();
@@ -33,7 +32,7 @@ const EmployeeDashboard = ({ currentView }) => {
     if (isError) {
         return <Text color="red">Error: Failed to load data.</Text>;
     }
-    
+
     const renderContent = () => {
         switch (currentView) {
             case 'open-shifts':
@@ -43,7 +42,7 @@ const EmployeeDashboard = ({ currentView }) => {
                         <Text>View and claim available shifts in your region.</Text>
                         <ShiftList 
                             viewType="open_shifts" 
-                            shifts={shifts} 
+                            shifts={shifts}
                             staffList={userList} 
                             onUpdate={fetchShifts} 
                         />
@@ -56,7 +55,7 @@ const EmployeeDashboard = ({ currentView }) => {
                         <Text>Shifts you have claimed and are awaiting approval.</Text>
                         <ShiftList 
                             viewType="my_claims" 
-                            shifts={shifts} 
+                            shifts={shifts}
                             staffList={userList} 
                             onUpdate={fetchShifts} 
                         />

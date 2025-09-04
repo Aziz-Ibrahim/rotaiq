@@ -27,7 +27,7 @@ const ManagerDashboard = ({ currentView }) => {
     const { branches, loading: branchesLoading, error: branchesError, fetchBranches } = useBranchList();
     const { regions, loading: regionsLoading, error: regionsError } = useRegionList();
     const { shifts, loading: shiftsLoading, error: shiftsError, fetchShifts } = useShiftList();
-    console.log('Shifts from API:', shifts) //DEBG
+
     const [selectedBranchId, setSelectedBranchId] = useState(null);
 
     // Combine all loading and error states
@@ -62,7 +62,8 @@ const ManagerDashboard = ({ currentView }) => {
 
     const regionalStaff = (userList || []).filter(u => u.branch?.region?.id === userRegionId);
     
-    const regionalShifts = (shifts || []).filter(s => s.branch?.region?.id === userRegionId);
+    // CORRECTED FILTERING LOGIC
+    const regionalShifts = (shifts || []).filter(s => s.branch_details?.region?.id === userRegionId);
 
     const isManager = user.role === 'branch_manager' || user.role === 'region_manager';
 
