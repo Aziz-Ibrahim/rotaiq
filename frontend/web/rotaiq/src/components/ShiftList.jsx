@@ -1,11 +1,11 @@
 import React from 'react';
 import { Title, Text, Accordion, Stack } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
-import { isSameDay, isToday } from 'date-fns';
 
 import { useAuth } from '../hooks/useAuth.jsx';
 import apiClient from '../api/apiClient.js';
 import ShiftCard from './ShiftCard.jsx';
+
 
 const ShiftList = ({ viewType, onUpdate, shifts: propShifts, staffList: propStaffList }) => { 
     const { user } = useAuth();
@@ -20,7 +20,6 @@ const ShiftList = ({ viewType, onUpdate, shifts: propShifts, staffList: propStaf
                 message: response.data.status,
                 color: 'green',
             });
-            // Call the appropriate update function
             if (onUpdate) onUpdate();
         } catch (error) {
             console.error('Error claiming shift:', error.response?.data || error.message);
@@ -34,33 +33,31 @@ const ShiftList = ({ viewType, onUpdate, shifts: propShifts, staffList: propStaf
 
     // Filter shifts based on viewType and user's branch
     const filteredShifts = shifts.filter(shift => {
-        // Ensure user and relevant data exist for comparison
         if (!user || !user.branch?.region) {
             return false;
         }
 
-        // CORRECTED BASE FILTER
+        // Apply a base filter to ensure shifts belong to the user's region
+        // This is a crucial check for all user types
         if (shift.branch_details?.region?.id !== user.branch.region.id) {
             return false;
         }
 
         switch (viewType) {
             case 'open_shifts':
-                if (user.role === 'floating_employee') {
-                    return shift.status === 'open';
-                }
-                return shift.status === 'open' && shift.branch_details?.id === user.branch.id;
+                // Both regular and floating employees can see all open shifts in their region
+                return shift.status === 'open';
             case 'pending_claims':
-                // Show shifts with at least one pending claim
+                // For managers: show shifts with at least one pending claim
                 return (shift.claims || []).some(claim => claim.status === 'pending');
             case 'my_posted_shifts':
-                // Show shifts the current user has posted
+                // For managers: show shifts the current manager has posted
                 return shift.posted_by_details?.id === user.id;
             case 'my_claims':
-                // Show shifts the current user has claimed
+                // For employees: show shifts the current employee has claimed
                 return (shift.claims || []).some(claim => claim.user?.id === user.id);
             case 'all_shifts':
-                // Managers see all shifts in their region, so no additional filtering is needed.
+                // For managers: see all shifts in their region. Base filter handles this.
                 return true; 
             default:
                 return false;
