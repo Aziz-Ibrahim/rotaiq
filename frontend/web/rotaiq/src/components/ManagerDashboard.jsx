@@ -27,7 +27,7 @@ const ManagerDashboard = ({ currentView }) => {
     const { branches, loading: branchesLoading, error: branchesError, fetchBranches } = useBranchList();
     const { regions, loading: regionsLoading, error: regionsError } = useRegionList();
     const { shifts, loading: shiftsLoading, error: shiftsError, fetchShifts } = useShiftList();
-
+    console.log('Shifts from API:', shifts) //DEBG
     const [selectedBranchId, setSelectedBranchId] = useState(null);
 
     // Combine all loading and error states
