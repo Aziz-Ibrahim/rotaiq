@@ -16,6 +16,7 @@ const EmployeeDashboard = ({ currentView }) => {
     const { user, loading: authLoading, error: authError } = useAuth();
     const { shifts, loading: shiftsLoading, error: shiftsError, fetchShifts } = useShiftList();
     const { userList, loading: userLoading, error: userError, fetchUsers } = useUserList();
+    console.log('Shifts for Employee Dashboard:', shifts);
 
     const isLoading = authLoading || shiftsLoading || userLoading;
     const isError = authError || shiftsError || userError;
