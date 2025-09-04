@@ -299,13 +299,28 @@ class ShiftViewSet(viewsets.ModelViewSet):
         base_queryset = Shift.objects.all()
 
         if user.is_authenticated:
-            if user.branch and user.branch.region:
+            # Check for manager roles first
+            if user.role in ['branch_manager', 'region_manager']:
+                if user.branch and user.branch.region:
+                    # Managers can see ALL shifts in their region
+                    return base_queryset.filter(
+                        branch__region=user.branch.region
+                    )
+            
+            # Now handle non-manager roles (employees)
+            if user.role in ['employee', 'floating_employee']:
+                # Employees can see shifts posted in their region OR
+                # shifts they are personally involved with
                 return base_queryset.filter(
                     Q(branch__region=user.branch.region) |
                     Q(assigned_to=user) |
                     Q(posted_by=user)
                 ).distinct()
+            
+            # Return an empty queryset for any other user roles
             return base_queryset.none()
+            
+        # For unauthenticated users, return an empty queryset
         return base_queryset.none()
     
     def perform_create(self, serializer):
