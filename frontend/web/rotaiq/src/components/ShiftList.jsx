@@ -6,15 +6,13 @@ import { useAuth } from '../hooks/useAuth.jsx';
 import apiClient from '../api/apiClient.js';
 import ShiftCard from './ShiftCard.jsx';
 
-
 const ShiftList = ({ viewType, onUpdate, shifts: propShifts, staffList: propStaffList }) => { 
     const { user } = useAuth();
     const shifts = propShifts || [];
     const staffList = propStaffList || [];
 
-    // Early return if essential data is missing.
-    // This check is the first line of defense against runtime errors.
-    if (!user || !user.branch || !user.branch.region) {
+    // Early return if essential data is missing
+    if (!user) {
         return <Text color="dimmed">Loading user data...</Text>;
     }
 
@@ -37,21 +35,16 @@ const ShiftList = ({ viewType, onUpdate, shifts: propShifts, staffList: propStaf
         }
     };
 
-    // Use a variable to store the user's region ID for clarity and consistency.
-    // Use `Number()` to ensure the data type is consistent.
-    const userRegionId = Number(user.branch.region.id);
-
     const filteredShifts = shifts.filter(shift => {
-        if (!user) {
-            return false;
-        }
-
-        // Get region IDs - handle both user structures
-        const userRegionId = user.branch?.region?.id || user.region;
-        const shiftRegionId = shift.branch_details?.region?.id;
+        // Convert both IDs to numbers for safe comparison
+        const userRegionId = Number(user.branch.region.id); // We know this exists
+        const shiftRegionId = Number(shift.branch_details?.region?.id);
         
-        // Check region match
+        console.log(`DEBUG: User region: ${userRegionId}, Shift region: ${shiftRegionId}`);
+        
+        // Check region match - single comprehensive check
         if (!userRegionId || !shiftRegionId || userRegionId !== shiftRegionId) {
+            console.log(`DEBUG: Filtering out shift ${shift.id} - region mismatch`);
             return false;
         }
 
@@ -72,6 +65,9 @@ const ShiftList = ({ viewType, onUpdate, shifts: propShifts, staffList: propStaf
         }
     });
 
+    console.log('DEBUG: Filtered shifts count:', filteredShifts.length);
+    console.log('DEBUG: Filtered shifts:', filteredShifts);
+
     const shiftItems = filteredShifts.map((shift) => (
         <ShiftCard 
             key={shift.id} 
@@ -86,7 +82,7 @@ const ShiftList = ({ viewType, onUpdate, shifts: propShifts, staffList: propStaf
     return (
         <Stack mt="md">
             {shiftItems.length > 0 ? (
-                <Accordion defaultValue={shiftItems[0].key}>
+                <Accordion defaultValue={shiftItems[0]?.key}>
                     {shiftItems}
                 </Accordion>
             ) : (
