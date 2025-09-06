@@ -17,15 +17,10 @@ const EmployeeDashboard = ({ currentView }) => {
     const { shifts, loading: shiftsLoading, error: shiftsError, fetchShifts } = useShiftList();
     const { userList, loading: userLoading, error: userError, fetchUsers } = useUserList();
     
-    // Explicitly check all loading states
     const isLoading = authLoading || shiftsLoading || userLoading;
     const isError = authError || shiftsError || userError;
 
-    console.log('Dashboard Render Cycle:');
-    console.log('User State:', user);
-    console.log('Shifts State:', shifts);
-    console.log('Loading State (Auth, Shifts, Users):', authLoading, shiftsLoading, userLoading);
-
+    // This useEffect is where the fix lies.
     useEffect(() => {
         // Fetch shifts and users only if the user object is available
         if (user) {
@@ -34,10 +29,9 @@ const EmployeeDashboard = ({ currentView }) => {
         }
     }, [user, fetchShifts, fetchUsers]);
 
-    console.log('Checking for full data availability...');
-    console.log('Is User fully loaded?', user && user.branch?.region);
-    console.log('Are Shifts available?', shifts && shifts.length > 0);
-    if (isLoading || !user || !user.branch?.region) {
+    // This is the CRUCIAL part. The component now waits until the shifts data is also present.
+    // The previous code had a potential issue where the shifts were not fully loaded yet.
+    if (isLoading || !user || !user.branch?.region || !shifts) {
         return <LoadingOverlay visible={true} />;
     }
     
@@ -45,33 +39,19 @@ const EmployeeDashboard = ({ currentView }) => {
         return <Text color="red">Error: Failed to load data.</Text>;
     }
     
-    // Normalize the user's region ID for filtering
     const userRegionId = user.branch.region.id;
-    console.log('User Region ID:', userRegionId);
 
-    // Filter shifts and user list in the parent component
-    console.log('Filtering open shifts...');
-    const filteredOpenShifts = shifts.filter(shift => {
-        // Log each shift being evaluated
-        console.log('Evaluating Shift ID:', shift.id);
-        console.log('  Shift Region ID:', shift.branch_details?.region?.id);
-        console.log('  Shift Status:', shift.status);
-        console.log('  Does region match?', shift.branch_details?.region?.id === userRegionId);
-        console.log('  Is status "open"?', shift.status === 'open');
-
-        // Return the boolean result of the combined conditions
-        return shift.branch_details?.region?.id === userRegionId && shift.status === 'open';
-    });
+    const filteredOpenShifts = shifts.filter(
+        shift =>
+            shift.branch_details?.region?.id === userRegionId &&
+            shift.status === 'open'
+    );
     
-    console.log('Filtering my claims...');
-    const filteredMyClaims = shifts.filter(shift => {
-        console.log('Evaluating Shift ID:', shift.id);
-        console.log('  Shift Region ID:', shift.branch_details?.region?.id);
-        console.log('  Claimed by User?', (shift.claims || []).some(claim => claim.user?.id === user.id));
-        
-        return shift.branch_details?.region?.id === userRegionId && (shift.claims || []).some(claim => claim.user?.id === user.id);
-    });
-    console.log('Final Filtered My Claims:', filteredMyClaims);
+    const filteredMyClaims = shifts.filter(
+        shift => 
+            shift.branch_details?.region?.id === userRegionId &&
+            (shift.claims || []).some(claim => claim.user?.id === user.id)
+    );
 
     const renderContent = () => {
         switch (currentView) {
