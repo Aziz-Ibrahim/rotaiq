@@ -6,17 +6,18 @@ import { useAuth } from '../hooks/useAuth.jsx';
 import apiClient from '../api/apiClient.js';
 import ShiftCard from './ShiftCard.jsx';
 
-
 const ShiftList = ({ viewType, onUpdate, shifts: propShifts, staffList: propStaffList }) => { 
     const { user } = useAuth();
     const shifts = propShifts || [];
     const staffList = propStaffList || [];
+
+    // Log the incoming props
     console.log('ShiftList Props:');
     console.log('View Type:', viewType);
-    console.log('Shifts Received:', shifts);
+    console.log('Total Shifts Received:', shifts);
     console.log('Number of Shifts Received:', shifts.length);
-    // Early return if essential data is missing.
-    // This check is the first line of defense against runtime errors.
+
+    // Early return if essential user data is missing
     if (!user || !user.branch || !user.branch.region) {
         return <Text color="dimmed">Loading user data...</Text>;
     }
@@ -40,19 +41,22 @@ const ShiftList = ({ viewType, onUpdate, shifts: propShifts, staffList: propStaf
         }
     };
 
-    // Use a variable to store the user's region ID for clarity and consistency.
-    // Use `Number()` to ensure the data type is consistent.
     const userRegionId = Number(user.branch.region.id);
 
+    // This is the filtering logic. The result is stored in `filteredShifts`.
     const filteredShifts = shifts.filter(shift => {
-        // Ensure shift data is complete before trying to access its properties.
-        if (!shift.branch_details?.region?.id) {
-            return false;
-        }
+        const shiftRegionId = Number(shift.branch_details?.region?.id);
 
-        const shiftRegionId = Number(shift.branch_details.region.id);
-
-        // Use strict equality with the converted numbers.
+        // Extensive logging for each shift's filter evaluation
+        console.groupCollapsed(`Filtering Shift ID: ${shift.id}`);
+        console.log('User Region ID:', userRegionId);
+        console.log('Shift Region ID:', shiftRegionId);
+        console.log('Region IDs match:', shiftRegionId === userRegionId);
+        console.log('Shift Status:', shift.status);
+        console.log('View Type:', viewType);
+        console.groupEnd();
+        
+        // This is the core logic. `true` is returned only if both conditions are met.
         if (shiftRegionId !== userRegionId) {
             return false;
         }
@@ -73,11 +77,9 @@ const ShiftList = ({ viewType, onUpdate, shifts: propShifts, staffList: propStaf
         }
     });
 
-    if (shifts.length > 0) {
-        console.log('ShiftList is mapping through the following shifts:', shifts);
-    } else {
-        console.log('No shifts received by ShiftList to display.');
-    }
+    // Log the result of the filtering process
+    console.log('Filtered Shifts Result:', filteredShifts);
+    console.log('Number of Filtered Shifts:', filteredShifts.length);
 
     const shiftItems = filteredShifts.map((shift) => (
         <ShiftCard 
@@ -93,7 +95,7 @@ const ShiftList = ({ viewType, onUpdate, shifts: propShifts, staffList: propStaf
     return (
         <Stack mt="md">
             {shiftItems.length > 0 ? (
-                <Accordion defaultValue={shiftItems[0].key}>
+                <Accordion defaultValue={String(shiftItems[0].key)}>
                     {shiftItems}
                 </Accordion>
             ) : (
