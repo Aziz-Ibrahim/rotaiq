@@ -10,7 +10,7 @@ import {
     Grid,
 } from '@mantine/core';
 
-import ShiftList from '../components/ShiftList.jsx';
+import ManagerShiftList from '../components/ManagerShiftList.jsx'; 
 import ShiftPostForm from '../components/ShiftPostForm.jsx';
 import StaffInvitationForm from '../components/StaffInvitationForm.jsx';
 import AnalyticsReport from '../components/AnalyticsReport.jsx';
@@ -74,7 +74,8 @@ const ManagerDashboard = ({ currentView }) => {
                     <>
                         <Title order={2}>Manager Dashboard</Title>
                         <Text>Welcome back, {user.first_name}! Here is your shift overview.</Text>
-                        <ShiftList 
+                        {/* The component name has been updated here */}
+                        <ManagerShiftList 
                             viewType="all_shifts" 
                             shifts={regionalShifts} 
                             staffList={regionalStaff} 
