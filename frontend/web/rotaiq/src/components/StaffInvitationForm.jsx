@@ -29,43 +29,37 @@ export default function StaffInvitationForm({ branches = [], roles = defaultRole
       role: '',
     },
     validationSchema: validationSchema,
-    onSubmit: async (values, { setSubmitting, resetForm, setStatus }) => {
+  onSubmit: async (values, { setSubmitting, resetForm, setStatus }) => {
       setStatus(null);
       setInviteData(null);
 
       try {
-        // Find the branch name from the branches prop based on the selected branch ID
-        const branchObject = branches.find(branch => branch.value === values.branch);
-        
-        // Create the payload to send to the API
-        const payload = {
-          ...values,
-          branch: branchObject ? branchObject.label : values.branch
-        };
+          // *** SIMPLIFIED PAYLOAD ***
+          // Send the values directly, as the backend now accepts the branch ID.
+          const payload = {
+              ...values
+          };
 
-        const response = await apiClient.post('/api/invitations/', payload);
-        
-        const token = response.data?.token;
+          const response = await apiClient.post('/api/invitations/', payload);
+          
+          const token = response.data?.token;
 
-        if (!token) {
-          console.error('API response did not contain a token:', response.data);
-          setStatus({
-            message: 'Invitation created, but token was not returned. Please check the server logs.',
-            color: 'red'
-          });
-          return;
-        }
+          if (!token) {
+              console.error('API response did not contain a token:', response.data);
+              setStatus({
+                  message: 'Invitation created, but token was not returned. Please check the server logs.',
+                  color: 'red'
+              });
+              return;
+          }
 
-        const invitationLink = `${window.location.origin}/register?token=${token}`;
-        
-        // Store the invitation link and token in state
-        setInviteData({ token, link: invitationLink });
-        
-        // Use a different success message for clarity
-        setStatus({ message: 'Invitation generated successfully.', color: 'green' });
-        
-        // Reset the form values after successful submission
-        resetForm();
+          const invitationLink = `${window.location.origin}/register?token=${token}`;
+          
+          setInviteData({ token, link: invitationLink });
+          
+          setStatus({ message: 'Invitation generated successfully.', color: 'green' });
+          
+          resetForm();
       } catch (err) {
         console.error('Invitation failed:', err.response?.data);
         setStatus({ 

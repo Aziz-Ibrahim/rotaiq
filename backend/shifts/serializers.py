@@ -274,9 +274,8 @@ class InvitationSerializer(serializers.ModelSerializer):
     first_name = serializers.CharField(required=True)
     last_name = serializers.CharField(required=True)
     role = serializers.CharField(required=True)
-    branch = serializers.SlugRelatedField(
+    branch = serializers.PrimaryKeyRelatedField(
         queryset=Branch.objects.all(),
-        slug_field='name',
         required=True
     )
     
@@ -293,7 +292,7 @@ class InvitationSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)
-        representation.pop('email', None)
+        representation['branch'] = instance.branch.name
         return representation
 
 
