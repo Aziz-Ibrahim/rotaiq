@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import {
     Container,
     Title,
@@ -16,17 +16,23 @@ const EmployeeDashboard = ({ currentView }) => {
     const { user, loading: authLoading, error: authError } = useAuth();
     const { shifts, loading: shiftsLoading, error: shiftsError, fetchShifts } = useShiftList();
     const { userList, loading: userLoading, error: userError, fetchUsers } = useUserList();
-    console.log('Shifts for Employee Dashboard:', shifts);
 
+    // The key change is in how we determine if loading is complete.
+    // We now check for both data and loading states.
     const isLoading = authLoading || shiftsLoading || userLoading;
     const isError = authError || shiftsError || userError;
 
     useEffect(() => {
-        fetchShifts();
-        fetchUsers();
-    }, [fetchShifts, fetchUsers]);
+        // Fetch data only after the user is authenticated, to ensure we have the user's branch
+        if (user) {
+            fetchShifts();
+            fetchUsers();
+        }
+    }, [user, fetchShifts, fetchUsers]);
     
-    if (isLoading) {
+    // This is the most crucial part. The component now waits for both 
+    // the user and shifts data to be available before rendering anything.
+    if (isLoading || !user || !shifts) {
         return <LoadingOverlay visible={true} />;
     }
     

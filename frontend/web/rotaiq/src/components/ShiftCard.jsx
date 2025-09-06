@@ -88,7 +88,6 @@ const ShiftCard = ({ shift, user, onUpdate, staffList }) => {
 
     const renderActionButtons = () => {
         if (isManager) {
-            // FIX: Add defensive check here
             const pendingClaims = (shift.claims || []).filter(claim => claim.status === 'pending');
             if (pendingClaims.length > 0) {
                 return (
@@ -133,9 +132,8 @@ const ShiftCard = ({ shift, user, onUpdate, staffList }) => {
         }
     };
 
-    // FIX: Add defensive checks here
-    const isPendingClaim = (shift.claims || []).some(claim => claim.user?.id === user.id && claim.status === 'pending');
-    const hasClaim = (shift.claims || []).some(claim => claim.user?.id === user.id);
+    // Corrected check for whether the current user has claimed this shift
+    const hasUserClaimed = (shift.claims || []).some(claim => claim.user?.id === user.id);
 
     return (
         <Accordion.Item value={String(shift.id)}>
@@ -176,14 +174,14 @@ const ShiftCard = ({ shift, user, onUpdate, staffList }) => {
                     <Divider my="sm" />
 
                     {/* Employee and floating employee actions */}
-                    {['employee', 'floating_employee'].includes(user.role) && shift.status === 'open' && !hasClaim && (
+                    {['employee', 'floating_employee'].includes(user.role) && shift.status === 'open' && !hasUserClaimed && (
                         <Button onClick={() => handleClaim(shift.id)} size="sm">
                             Claim Shift
                         </Button>
                     )}
-                    {['employee', 'floating_employee'].includes(user.role) && isPendingClaim && (
+                    {['employee', 'floating_employee'].includes(user.role) && hasUserClaimed && (
                         <Text c="orange" fz="sm" fw={500}>
-                            Pending manager approval
+                            You have claimed this shift.
                         </Text>
                     )}
 
