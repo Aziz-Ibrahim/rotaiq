@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Container,
     Title,
@@ -16,29 +16,62 @@ const EmployeeDashboard = ({ currentView }) => {
     const { user, loading: authLoading, error: authError } = useAuth();
     const { shifts, loading: shiftsLoading, error: shiftsError, fetchShifts } = useShiftList();
     const { userList, loading: userLoading, error: userError, fetchUsers } = useUserList();
-
-    // The key change is in how we determine if loading is complete.
-    // We now check for both data and loading states.
+    
+    // Explicitly check all loading states
     const isLoading = authLoading || shiftsLoading || userLoading;
     const isError = authError || shiftsError || userError;
 
+    console.log('Dashboard Render Cycle:');
+    console.log('User State:', user);
+    console.log('Shifts State:', shifts);
+    console.log('Loading State (Auth, Shifts, Users):', authLoading, shiftsLoading, userLoading);
+
     useEffect(() => {
-        // Fetch data only after the user is authenticated, to ensure we have the user's branch
+        // Fetch shifts and users only if the user object is available
         if (user) {
             fetchShifts();
             fetchUsers();
         }
     }, [user, fetchShifts, fetchUsers]);
-    
-    // This is the most crucial part. The component now waits for both 
-    // the user and shifts data to be available before rendering anything.
-    if (isLoading || !user || !shifts) {
+
+    console.log('Checking for full data availability...');
+    console.log('Is User fully loaded?', user && user.branch?.region);
+    console.log('Are Shifts available?', shifts && shifts.length > 0);
+    if (isLoading || !user || !user.branch?.region) {
         return <LoadingOverlay visible={true} />;
     }
     
     if (isError) {
         return <Text color="red">Error: Failed to load data.</Text>;
     }
+    
+    // Normalize the user's region ID for filtering
+    const userRegionId = user.branch.region.id;
+    console.log('User Region ID:', userRegionId);
+
+    // Filter shifts and user list in the parent component
+    console.log('Filtering open shifts...');
+    const filteredOpenShifts = shifts.filter(shift => {
+        // Log each shift being evaluated
+        console.log('Evaluating Shift ID:', shift.id);
+        console.log('  Shift Region ID:', shift.branch_details?.region?.id);
+        console.log('  Shift Status:', shift.status);
+        console.log('  Does region match?', shift.branch_details?.region?.id === userRegionId);
+        console.log('  Is status "open"?', shift.status === 'open');
+
+        // Return the boolean result of the combined conditions
+        return shift.branch_details?.region?.id === userRegionId && shift.status === 'open';
+    });
+    
+    console.log('Filtering my claims...');
+    const filteredMyClaims = shifts.filter(shift => {
+        console.log('Evaluating Shift ID:', shift.id);
+        console.log('  Shift Region ID:', shift.branch_details?.region?.id);
+        console.log('  Claimed by User?', (shift.claims || []).some(claim => claim.user?.id === user.id));
+        
+        return shift.branch_details?.region?.id === userRegionId && (shift.claims || []).some(claim => claim.user?.id === user.id);
+    });
+    console.log('Final Filtered My Claims:', filteredMyClaims);
 
     const renderContent = () => {
         switch (currentView) {
@@ -49,7 +82,7 @@ const EmployeeDashboard = ({ currentView }) => {
                         <Text>View and claim available shifts in your region.</Text>
                         <ShiftList 
                             viewType="open_shifts" 
-                            shifts={shifts}
+                            shifts={filteredOpenShifts}
                             staffList={userList} 
                             onUpdate={fetchShifts} 
                         />
@@ -62,7 +95,7 @@ const EmployeeDashboard = ({ currentView }) => {
                         <Text>Shifts you have claimed and are awaiting approval.</Text>
                         <ShiftList 
                             viewType="my_claims" 
-                            shifts={shifts}
+                            shifts={filteredMyClaims}
                             staffList={userList} 
                             onUpdate={fetchShifts} 
                         />
