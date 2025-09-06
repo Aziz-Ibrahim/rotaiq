@@ -12,6 +12,12 @@ const ShiftList = ({ viewType, onUpdate, shifts: propShifts, staffList: propStaf
     const shifts = propShifts || [];
     const staffList = propStaffList || [];
 
+    // Early return if essential data is missing.
+    // This check is the first line of defense against runtime errors.
+    if (!user || !user.branch || !user.branch.region) {
+        return <Text color="dimmed">Loading user data...</Text>;
+    }
+
     const handleClaim = async (shiftId) => {
         try {
             const response = await apiClient.post(`/api/shifts/${shiftId}/claim/`);
@@ -31,33 +37,33 @@ const ShiftList = ({ viewType, onUpdate, shifts: propShifts, staffList: propStaf
         }
     };
 
-    // Filter shifts based on viewType and user's branch
+    // Use a variable to store the user's region ID for clarity and consistency.
+    // Use `Number()` to ensure the data type is consistent.
+    const userRegionId = Number(user.branch.region.id);
+
     const filteredShifts = shifts.filter(shift => {
-        if (!user || !user.branch?.region) {
+        // Ensure shift data is complete before trying to access its properties.
+        if (!shift.branch_details?.region?.id) {
             return false;
         }
 
-        // Apply a base filter to ensure shifts belong to the user's region
-        // This is a crucial check for all user types
-        if (shift.branch_details?.region?.id !== user.branch.region.id) {
+        const shiftRegionId = Number(shift.branch_details.region.id);
+
+        // Use strict equality with the converted numbers.
+        if (shiftRegionId !== userRegionId) {
             return false;
         }
 
         switch (viewType) {
             case 'open_shifts':
-                // Both regular and floating employees can see all open shifts in their region
                 return shift.status === 'open';
             case 'pending_claims':
-                // For managers: show shifts with at least one pending claim
                 return (shift.claims || []).some(claim => claim.status === 'pending');
             case 'my_posted_shifts':
-                // For managers: show shifts the current manager has posted
                 return shift.posted_by_details?.id === user.id;
             case 'my_claims':
-                // For employees: show shifts the current employee has claimed
                 return (shift.claims || []).some(claim => claim.user?.id === user.id);
             case 'all_shifts':
-                // For managers: see all shifts in their region. Base filter handles this.
                 return true; 
             default:
                 return false;
