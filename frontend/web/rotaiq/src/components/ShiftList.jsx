@@ -42,18 +42,20 @@ const ShiftList = ({ viewType, onUpdate, shifts: propShifts, staffList: propStaf
     const userRegionId = Number(user.branch.region.id);
 
     const filteredShifts = shifts.filter(shift => {
-        // Ensure shift data is complete before trying to access its properties.
-        if (!shift.branch_details?.region?.id) {
+        if (!user) {
             return false;
         }
 
-        const shiftRegionId = Number(shift.branch_details.region.id);
-
-        // Use strict equality with the converted numbers.
-        if (shiftRegionId !== userRegionId) {
+        // Get region IDs - handle both user structures
+        const userRegionId = user.branch?.region?.id || user.region;
+        const shiftRegionId = shift.branch_details?.region?.id;
+        
+        // Check region match
+        if (!userRegionId || !shiftRegionId || userRegionId !== shiftRegionId) {
             return false;
         }
 
+        // Now apply the view-specific filters
         switch (viewType) {
             case 'open_shifts':
                 return shift.status === 'open';
@@ -64,7 +66,7 @@ const ShiftList = ({ viewType, onUpdate, shifts: propShifts, staffList: propStaf
             case 'my_claims':
                 return (shift.claims || []).some(claim => claim.user?.id === user.id);
             case 'all_shifts':
-                return true; 
+                return true;
             default:
                 return false;
         }
