@@ -34,11 +34,14 @@ export default function StaffInvitationForm({ branches = [], roles = defaultRole
       setInviteData(null);
 
       try {
-          // *** SIMPLIFIED PAYLOAD ***
-          // Send the values directly, as the backend now accepts the branch ID.
-          const payload = {
+          // Create the initial payload
+          let payload = {
               ...values
           };
+
+          if (currentUserRole === 'branch_manager') {
+              payload.branch = userBranchId;
+          }
 
           const response = await apiClient.post('/api/invitations/', payload);
           
@@ -61,18 +64,18 @@ export default function StaffInvitationForm({ branches = [], roles = defaultRole
           
           resetForm();
       } catch (err) {
-        console.error('Invitation failed:', err.response?.data);
-        setStatus({ 
-          message: err.response?.data?.email?.[0] || 
-                   err.response?.data?.detail ||
-                   err.response?.data?.branch?.[0] ||
-                   'Invitation failed. Please try again.', 
-          color: 'red' 
-        });
+          console.error('Invitation failed:', err.response?.data);
+          setStatus({ 
+              message: err.response?.data?.email?.[0] || 
+                      err.response?.data?.detail ||
+                      err.response?.data?.branch?.[0] ||
+                      'Invitation failed. Please try again.', 
+              color: 'red' 
+          });
       } finally {
-        setSubmitting(false);
+          setSubmitting(false);
       }
-    },
+  },
   });
 
   return (

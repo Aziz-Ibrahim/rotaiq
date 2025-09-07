@@ -2,7 +2,11 @@ from rest_framework import viewsets, mixins, status, generics, permissions
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
-from rest_framework.exceptions import PermissionDenied, NotFound
+from rest_framework.exceptions import (
+    PermissionDenied,
+    ValidationError,
+    NotFound
+)
 from rest_framework.parsers import MultiPartParser, FormParser
 from django.shortcuts import get_object_or_404
 from django.db import transaction
@@ -195,6 +199,14 @@ class InvitationViewSet(
     serializer_class = InvitationSerializer
     permission_classes = [IsAuthenticated]
 
+    def get_serializer_class(self):
+        """
+        Dynamically chooses the serializer based on the action.
+        """
+        if self.action == 'details':
+            return InvitationDetailsSerializer
+        return InvitationSerializer
+
     @action(detail=False, methods=['get'], permission_classes=[AllowAny])
     def details(self, request):
         """
@@ -206,7 +218,7 @@ class InvitationViewSet(
                 {"detail": "Token is required."},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
         invitation = get_object_or_404(Invitation, token=token, is_used=False)
         serializer = self.get_serializer(invitation)
         return Response(serializer.data)
@@ -226,36 +238,62 @@ class InvitationViewSet(
         """
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        
-        user = self.request.user
-        
-        invitation = None
 
-        # Branch Managers can only create invitations for their own branch
+        user = self.request.user
+        validated_data = serializer.validated_data
+        invitation_branch = validated_data.get('branch')
+        invitation_role = validated_data.get('role')
+
+        # Check if a user with this email already exists
+        if User.objects.filter(email=validated_data.get('email')).exists():
+            raise ValidationError(
+                {"email": "A user with this email address already exists."}
+            )
+
         if user.role == 'branch_manager':
-            invitation_branch = serializer.validated_data.get('branch')
-            if invitation_branch and invitation_branch != user.branch:
+            # Branch managers can only create invitations for their own branch
+            if invitation_branch != user.branch:
                 raise PermissionDenied(
                     "You can only create invitations for your own branch."
                 )
             
-            # Save the invitation with the branch from the current user
-            invitation = serializer.save(branch=user.branch)
-
-        # Region Managers can create invitations for any branch in their region
-        elif user.role == 'region_manager':
-            invitation_branch = serializer.validated_data.get('branch')
-            if not invitation_branch:
+            # Check if branch manager is trying to create a manager role
+            if invitation_role in [
+                'branch_manager',
+                'region_manager'
+            ] and invitation_role != user.role:
                 raise PermissionDenied(
-                    "A branch must be specified for this role."
-                )
-            if invitation_branch.region != user.region:
-                raise PermissionDenied(
-                    "You can only create invitations for branches in your "
-                    "region."
+                    "You can only create invitations for roles below your own."
                 )
             
             # Save the invitation with the branch from the validated data
+            invitation = serializer.save(branch=invitation_branch)
+
+        elif user.role == 'region_manager':
+            # Region managers can create invitations for any branch in
+            # their region
+            if not invitation_branch:
+                raise ValidationError(
+                    {"branch": "A branch must be specified for this role."}
+                )
+            
+            if invitation_branch.region != user.branch.region:
+                raise PermissionDenied(
+                    "You can only create invitations for branches in your" \
+                    "region."
+                )
+            
+            # Check if region manager is trying to create a higher manager role
+            if (
+                invitation_role == 'region_manager'
+                and invitation_branch.region != user.branch.region
+            ):
+                raise PermissionDenied(
+                    "You can only create regional manager invitations for" \
+                    "your own region."
+                )
+            
+            # Save the invitation with the validated branch
             invitation = serializer.save(branch=invitation_branch)
 
         else:
@@ -263,9 +301,9 @@ class InvitationViewSet(
                 "You do not have permission to perform this action."
             )
         
+        # The invitation object now has the email saved to it
         if invitation:
             try:
-                # The invitation object now has the email saved to it
                 send_invitation_email(
                     sender_name=user.get_full_name() or user.username,
                     sender_branch=(

@@ -292,9 +292,21 @@ class InvitationSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)
-        representation['branch'] = instance.branch.name
+        if 'branch' in representation and isinstance(
+            representation['branch'],
+            int
+        ):
+            representation['branch'] = instance.branch.name 
         return representation
 
+
+class InvitationDetailsSerializer(serializers.ModelSerializer):
+    """
+    A specific serializer for the public invitation details view.
+    """
+    class Meta:
+        model = Invitation
+        fields = ['first_name', 'last_name', 'email']
 
 
 class ShiftClaimSerializer(serializers.ModelSerializer):
