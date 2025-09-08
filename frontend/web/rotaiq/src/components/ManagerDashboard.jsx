@@ -155,7 +155,7 @@ const ManagerDashboard = ({ currentView }) => {
     };
 
     return (
-        <Container>
+        <Container fluid>
             {renderContent()}
         </Container>
     );

@@ -34,7 +34,7 @@ const HeadOfficeDashboard = () => {
     }
 
     return (
-        <Container>
+        <Container fluid>
             <Title order={2}>Head Office Dashboard</Title>
             <Text>View all reports and filter by region or branch.</Text>
             

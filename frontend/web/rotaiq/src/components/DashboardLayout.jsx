@@ -44,7 +44,21 @@ const DashboardLayout = ({ children, user, currentView, setCurrentView }) => {
         </Group>
       </AppShell.Header>
 
-      <AppShell.Navbar p="xs" bg={theme.colors['dark-olive'][5]}>
+      <AppShell.Navbar
+        p="xs"
+        bg={theme.colors['dark-olive'][5]}
+        // Add this styles prop to hide the scrollbar
+        styles={{
+          root: {
+            '::-webkit-scrollbar': {
+              width: '0.4rem',
+            },
+            '::-webkit-scrollbar-thumb': {
+              backgroundColor: 'transparent',
+            },
+          },
+        }}
+      >
         <AppShell.Section>
           <Group position="center" my="xl">
             <Image src={RotaIQLogo} alt="RotaIQ Logo" height={160} fit="contain" />

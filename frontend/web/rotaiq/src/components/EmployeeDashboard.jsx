@@ -35,7 +35,7 @@ const EmployeeDashboard = ({ currentView }) => {
     };
 
     return (
-        <Container>
+        <Container fluid>
             {renderContent()}
         </Container>
     );

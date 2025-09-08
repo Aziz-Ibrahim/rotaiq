@@ -6,14 +6,16 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import ManagerRegister from './pages/ManagerRegister';
 import Dashboard from './pages/Dashboard';
-import UserProfile from './components/UserProfile'; // Import the new UserProfile component
+import UserProfile from './components/UserProfile';
+import WelcomePage from './pages/WelcomePage.jsx';
+import NotFoundPage from './pages/NotFoundPage.jsx';
 import { MantineProvider } from '@mantine/core';
 import { Notifications } from '@mantine/notifications';
 import '@mantine/core/styles.css';
 import '@mantine/dates/styles.css';
 import '@mantine/notifications/styles.css';
 import './index.css';
-import { theme } from './theme.js'; 
+import { theme } from './theme.js';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
@@ -22,14 +24,14 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         <Notifications position="top-right" />
         <Routes>
           <Route path="/" element={<App />}>
-            <Route index element={<Login />} />
+            <Route index element={<WelcomePage />} />
             <Route path="login" element={<Login />} />
             <Route path="register" element={<Register />} />
             <Route path="manager-register" element={<ManagerRegister />} />
             <Route path="dashboard" element={<Dashboard />}>
               <Route path="user-profile" element={<UserProfile />} />
-              {/* Add other dashboard-related nested routes here as needed */}
             </Route>
+            <Route path="*" element={<NotFoundPage />} />
           </Route>
         </Routes>
       </MantineProvider>
