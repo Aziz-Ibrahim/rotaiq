@@ -1,5 +1,5 @@
 # RotaIQ
-
+![RotaIQ](frontend/web/rotaiq/src/assets/rotaiQ.png)
 [RotaIQ](https://www.rotaiq.uk) is a smart web application designed to help multi-site businesses manage shift gaps and improve workforce efficiency.  
 
 ## What is RotaIQ?  
