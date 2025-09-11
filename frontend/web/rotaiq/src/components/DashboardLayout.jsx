@@ -74,8 +74,12 @@ const DashboardLayout = ({ children, user, currentView, setCurrentView }) => {
         </AppShell.Section>
       </AppShell.Navbar>
 
-      <AppShell.Main>
-        {children}
+      <AppShell.Main
+          p={rem(15)}
+          pt={rem(15)}
+          style={{ width: '100%', maxWidth: '100%' }}
+      >
+          {children}
       </AppShell.Main>
     </AppShell>
   );
