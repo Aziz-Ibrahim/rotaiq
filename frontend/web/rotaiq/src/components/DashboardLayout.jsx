@@ -7,6 +7,7 @@ import {
   Image,
   Stack,
   Burger,
+  rem,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import MainLinks from './MainLinks.jsx';
