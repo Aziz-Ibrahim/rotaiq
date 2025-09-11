@@ -16,7 +16,7 @@ import {
   IconShieldLock,
 } from '@tabler/icons-react';
 
-import './MainLinks.css'; // Import the new CSS file
+import './MainLinks.css';
 
 const managerLinks = [
   { icon: IconGauge, label: 'Dashboard', to: 'dashboard' },

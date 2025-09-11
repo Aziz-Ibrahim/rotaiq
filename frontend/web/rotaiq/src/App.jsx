@@ -4,7 +4,9 @@ import { AuthProvider } from './hooks/useAuth';
 function App() {
   return (
     <AuthProvider>
-      <Outlet />
+      <Flex direction="column" style={{ minHeight: '100vh' }}>
+        <Outlet />
+      </Flex>
     </AuthProvider>
   );
 }

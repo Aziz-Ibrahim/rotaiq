@@ -4,7 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useRegionList } from '../hooks/useRegionList';
 import { useBranchList } from '../hooks/useBranchList';
 import ReportsDashboard from './ReportsDashboard';
-import AnalyticsReport from './AnalyticsReport.jsx'; // Make sure you import this
+import AnalyticsReport from './AnalyticsReport.jsx';
 
 const HeadOfficeDashboard = () => {
     const { user, loading: userLoading } = useAuth();

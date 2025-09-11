@@ -1,7 +1,6 @@
 import { createTheme } from '@mantine/core';
 
 export const theme = createTheme({
-  // Define your custom color palette
   colors: {
     'dark-olive': [
       '#F0F2E9', '#DDE3C8', '#C9D4A7', '#B6C685', '#A2B863', 
@@ -13,10 +12,8 @@ export const theme = createTheme({
     ],
   },
   
-  // Set the primary color for the theme
   primaryColor: 'dark-olive',
 
-  // Define global font styles
   fontFamily: 'Roboto Flex, sans-serif',
   headings: {
     fontFamily: 'Roboto Flex, sans-serif',

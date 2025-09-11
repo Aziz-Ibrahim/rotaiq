@@ -48,7 +48,6 @@ const DashboardLayout = ({ children, user, currentView, setCurrentView }) => {
       <AppShell.Navbar
         p="xs"
         bg={theme.colors['dark-olive'][5]}
-        // Add this styles prop to hide the scrollbar
         styles={{
           root: {
             '::-webkit-scrollbar': {
@@ -78,7 +77,6 @@ const DashboardLayout = ({ children, user, currentView, setCurrentView }) => {
       <AppShell.Main
           p={rem(15)}
           pt={rem(15)}
-          style={{ width: '100%', maxWidth: '100%' }}
       >
           {children}
       </AppShell.Main>

@@ -1,5 +1,3 @@
-// src/components/ReportsDashboard.jsx
-
 import React from 'react';
 import { Paper, Text, Loader, Center } from '@mantine/core';
 import { 

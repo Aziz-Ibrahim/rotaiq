@@ -50,7 +50,6 @@ const AssignStaffModal = ({ opened, onClose, shift, staffList, onAssignSuccess }
             opened={opened} 
             onClose={onClose} 
             title="Assign Staff to Shift"
-            // ADDED STYLES FOR CENTERING
             styles={{
                 root: { position: 'fixed' },
                 inner: { top: '50%', left: '50%', transform: 'translate(-50%, -50%)', padding: '1rem' }

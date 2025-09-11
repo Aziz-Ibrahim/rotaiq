@@ -1,4 +1,3 @@
-// src/pages/ManagerRegister.jsx
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import apiClient from '../api/apiClient';
@@ -11,7 +10,7 @@ const ManagerRegister = () => {
         first_name: '',
         last_name: '',
         role: 'manager',
-        branch_name: '' // Updated field name
+        branch_name: ''
     });
     const [error, setError] = useState('');
     const navigate = useNavigate();
@@ -28,7 +27,7 @@ const ManagerRegister = () => {
             navigate('/login');
         } catch (err) {
             setError('Registration failed. Please try again.');
-            console.error(err.response.data); // Log the response for better debugging
+            console.error(err.response.data);
         }
     };
 

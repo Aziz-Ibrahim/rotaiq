@@ -83,7 +83,7 @@ const UserProfile = () => {
                 headers: { 'Content-Type': 'multipart/form-data' },
             });
             
-            // The backend now returns the full user object with the new avatar URL
+            // The backend returns the full user object with avatar URL
             updateUserProfile(response.data);
 
             notifications.show({

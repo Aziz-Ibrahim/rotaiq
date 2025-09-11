@@ -30,7 +30,6 @@ const AnalyticsReport = ({ user, selectedRegionId, selectedBranchId }) => {
             }
         }
 
-        // Add filters from props for Head Office and Region Manager dashboards
         if (selectedRegionId) {
             filters.region_id = selectedRegionId;
         }

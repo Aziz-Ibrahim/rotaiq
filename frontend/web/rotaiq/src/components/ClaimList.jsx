@@ -52,7 +52,6 @@ const ClaimList = ({ claims, onUpdate }) => {
         }
     };
 
-    // FIX: Ensure 'claims' is always an array
     const validClaims = claims || [];
 
     return (

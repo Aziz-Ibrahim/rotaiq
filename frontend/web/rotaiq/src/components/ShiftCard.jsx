@@ -132,7 +132,7 @@ const ShiftCard = ({ shift, user, onUpdate, staffList }) => {
         }
     };
 
-    // Corrected check for whether the current user has claimed this shift
+    // Check for whether the current user has claimed this shift
     const hasUserClaimed = (shift.claims || []).some(claim => claim.user?.id === user.id);
 
     return (

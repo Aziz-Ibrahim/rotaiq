@@ -9,7 +9,7 @@ import { IconClock } from '@tabler/icons-react';
 import apiClient from '../api/apiClient.js';
 import { useAuth } from '../hooks/useAuth.jsx';
 
-// Now accepts branches list as a prop
+// Accepts branches list as a prop
 const ShiftPostForm = ({ onShiftPosted, branches }) => {
     const { user } = useAuth();
     const [loading, setLoading] = useState(false);

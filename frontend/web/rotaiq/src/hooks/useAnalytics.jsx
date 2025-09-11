@@ -29,7 +29,7 @@ export const useAnalytics = (endpoint, filters = {}) => {
                 const queryString = new URLSearchParams(cleanedFilters).toString();
                 // Ensure the endpoint matches the new backend URL path
                 const url = `/api/analytics/${endpoint}/?${queryString}`;
-                console.log(`Fetching analytics from: ${url}`); // Add a console log for debugging
+                console.log(`Fetching analytics from: ${url}`);
                 const response = await apiClient.get(url);
                 setData(response.data);
             } catch (err) {
@@ -47,7 +47,6 @@ export const useAnalytics = (endpoint, filters = {}) => {
         };
 
         fetchData();
-        // The dependency array now includes the filters object to re-run the effect
     }, [endpoint, authLoading, JSON.stringify(filters)]);
 
     return { data, loading, error };
