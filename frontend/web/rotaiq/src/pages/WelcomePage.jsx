@@ -15,7 +15,7 @@ import RotaIQLogo from '../assets/rotaiQ.png';
 const WelcomePage = () => {
     return (
         <Center style={{ minHeight: '100vh', flexDirection: 'column' }}>
-            <Container size="md" ta="center" mx="auto">
+            <Container ta="center" mx="auto">
                 <Image src={RotaIQLogo} alt="RotaIQ Logo" height={160} fit="contain" mb="md" />
                 <Title order={1}>Welcome to RotaIQ</Title>
                 <Text fz="lg" mt="md" c="dimmed">

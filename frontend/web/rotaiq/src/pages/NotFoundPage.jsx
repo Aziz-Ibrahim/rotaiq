@@ -5,7 +5,7 @@ import {
     Text,
     Button,
     Stack,
-    rem,
+    Center, // Import Center
 } from '@mantine/core';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
@@ -15,7 +15,6 @@ const NotFoundPage = () => {
     const navigate = useNavigate();
 
     const handleGoBack = () => {
-        // Check if the user is authenticated (user object exists)
         if (user) {
             navigate('/dashboard');
         } else {
@@ -24,17 +23,19 @@ const NotFoundPage = () => {
     };
 
     return (
-        <Container size="md" pt={rem(100)} ta="center">
-            <Title order={1} fz={rem(80)}>404</Title>
-            <Text fz="lg" mt="md" c="dimmed">
-                Oops! The page you're looking for doesn't exist.
-            </Text>
-            <Stack mt="xl" align="center" gap="md">
-                <Button size="lg" radius="xl" variant="filled" onClick={handleGoBack}>
-                    Go Back
-                </Button>
-            </Stack>
-        </Container>
+        <Center style={{ minHeight: '100vh' }}>
+            <Container size="md" ta="center">
+                <Title order={1} style={{ fontSize: '5rem' }}>404</Title>
+                <Text fz="lg" mt="md" c="dimmed">
+                    Oops! The page you're looking for doesn't exist.
+                </Text>
+                <Stack mt="xl" align="center" gap="md">
+                    <Button size="lg" radius="xl" variant="filled" onClick={handleGoBack}>
+                        Go Back
+                    </Button>
+                </Stack>
+            </Container>
+        </Center>
     );
 };
 

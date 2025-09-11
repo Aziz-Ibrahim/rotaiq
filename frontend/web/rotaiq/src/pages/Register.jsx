@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Button, TextInput, Paper, Text, Title, Group, LoadingOverlay } from '@mantine/core';
+import { Button, TextInput, Paper, Text, Title, Group, LoadingOverlay, Center, Container } from '@mantine/core';
 
 import apiClient from '../api/apiClient';
 
@@ -10,10 +10,10 @@ const Register = () => {
     const [password, setPassword] = useState('');
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
-    const [loading, setLoading] = useState(true); // Start with loading true
+    const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
-    const [invitationEmail, setInvitationEmail] = useState(''); // New state for email
+    const [invitationEmail, setInvitationEmail] = useState('');
 
     const token = searchParams.get('token');
 
@@ -26,11 +26,9 @@ const Register = () => {
             }
 
             try {
-                // Fetch invitation details using the token
                 const response = await apiClient.get(`api/invitations/details/?token=${token}`);
                 const { first_name, last_name, email } = response.data;
-                
-                // Prefill the form fields and save the email for display
+
                 setFirstName(first_name || '');
                 setLastName(last_name || '');
                 setInvitationEmail(email);
@@ -67,7 +65,7 @@ const Register = () => {
             setTimeout(() => navigate('/login'), 3000);
         } catch (err) {
             setError(err.response?.data?.detail || 'An unexpected error occurred.');
-        'An unexpected error occurred.'        } finally {
+        } finally {
             setLoading(false);
         }
     };
@@ -78,70 +76,76 @@ const Register = () => {
 
     if (error) {
         return (
-            <Paper p="lg" shadow="xs" className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
-                <Text color="red" size="lg" weight={500}>{error}</Text>
-            </Paper>
+            <Center style={{ minHeight: '100vh' }}>
+                <Paper p="lg" shadow="xs">
+                    <Text color="red" size="lg" weight={500}>{error}</Text>
+                </Paper>
+            </Center>
         );
     }
 
     if (success) {
         return (
-            <Paper p="lg" shadow="xs" className="flex flex-col items-center justify-center min-h-screen bg-green-50">
-                <Text color="green" size="lg" weight={500} className="text-center">
-                    {success}
-                    <br />
-                    You can now log in with your new password.
-                    <br />
-                    <span className="font-bold">{invitationEmail}</span> is your username.
-                </Text>
-                <Button mt="md" onClick={() => navigate('/login')}>Go to Login</Button>
-            </Paper>
+            <Center style={{ minHeight: '100vh' }}>
+                <Paper p="lg" shadow="xs">
+                    <Text color="green" size="lg" weight={500} style={{ textAlign: 'center' }}>
+                        {success}
+                        <br />
+                        You can now log in with your new password.
+                        <br />
+                        <span style={{ fontWeight: 'bold' }}>{invitationEmail}</span> is your username.
+                    </Text>
+                    <Button mt="md" onClick={() => navigate('/login')} fullWidth>Go to Login</Button>
+                </Paper>
+            </Center>
         );
     }
-    
-    // The registration form
+
     return (
-        <Paper p="lg" shadow="xs" className="w-full max-w-md mx-auto my-12">
-            <Title order={2} className="text-center mb-6">Create Your Password</Title>
-            <form onSubmit={handleSubmit}>
-                {/* Display the email as a read-only field */}
-                <TextInput
-                    label="Email (Your Username)"
-                    value={invitationEmail}
-                    readOnly
-                    disabled
-                />
-                <TextInput
-                    label="First Name"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    placeholder="Enter your first name"
-                    required
-                    mt="md"
-                />
-                <TextInput
-                    label="Last Name"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    placeholder="Enter your last name"
-                    required
-                    mt="md"
-                />
-                <TextInput
-                    label="New Password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Choose a password"
-                    required
-                    mt="md"
-                />
-                <Group mt="xl" position="right">
-                    <Button type="submit" loading={loading}>Register</Button>
-                </Group>
-            </form>
-            {error && <Text color="red" mt="md" className="text-center">{error}</Text>}
-        </Paper>
+        <Center style={{ minHeight: '100vh' }}>
+            <Container size={420}>
+                <Paper p="lg" shadow="xs" className="w-full max-w-md mx-auto my-12">
+                    <Title order={2} style={{ textAlign: 'center' }} mb="lg">Create Your Password</Title>
+                    <form onSubmit={handleSubmit}>
+                        <TextInput
+                            label="Email (Your Username)"
+                            value={invitationEmail}
+                            readOnly
+                            disabled
+                        />
+                        <TextInput
+                            label="First Name"
+                            value={firstName}
+                            onChange={(e) => setFirstName(e.target.value)}
+                            placeholder="Enter your first name"
+                            required
+                            mt="md"
+                        />
+                        <TextInput
+                            label="Last Name"
+                            value={lastName}
+                            onChange={(e) => setLastName(e.target.value)}
+                            placeholder="Enter your last name"
+                            required
+                            mt="md"
+                        />
+                        <TextInput
+                            label="New Password"
+                            type="password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            placeholder="Choose a password"
+                            required
+                            mt="md"
+                        />
+                        <Group mt="xl" position="right">
+                            <Button type="submit" loading={loading}>Register</Button>
+                        </Group>
+                    </form>
+                    {error && <Text color="red" mt="md" style={{ textAlign: 'center' }}>{error}</Text>}
+                </Paper>
+            </Container>
+        </Center>
     );
 };
 

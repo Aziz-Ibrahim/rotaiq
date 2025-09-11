@@ -5,7 +5,7 @@ import { Flex } from '@mantine/core';
 function App() {
   return (
     <AuthProvider>
-      <Flex direction="column" style={{ minHeight: '100vh' }}>
+      <Flex direction="column" style={{ minHeight: '100vh', width: '100vw' }}>
         <Outlet />
       </Flex>
     </AuthProvider>
